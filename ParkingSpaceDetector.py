@@ -186,14 +186,31 @@ def segments(p):
     return zip(p, p[1:] + [p[0]])
 
 
-def is_space_vacant(vertex, count, k) -> bool:
+def is_space_vacant(vertex, count, vacant_threshold) -> bool:
+    """ Determine if space is vacant depending on the pixel count.
+ If count is less than vacant_threshold * area portion, space is vacant.
+"""
     a = area(vertex)
 
-    return(count < k * a)
+    return(count < vacant_threshold * a)
 
 
 class DetectionParams:
-    def __init__(self, gb_k, gb_s, at_method, at_blockSize, at_C, median_k=-1, bw_size=-1, bw_conn=8):
+    """ # Parameters used for detecting space occupancy.
+        ## Attributes:
+        - gb_k :                GaussianBlur kernel
+        - gb_s :                GaussianBlur sigma (std. deviation)
+        - at_method :           adaptiveThreshold method
+        - at_blockSize :        adaptiveThreshold blockSize neighborhood that is used to calculate a threshold value for the pixel
+        - at_C :                adaptiveThreshold C constant to be substracted
+        - median_k :            Median filter kernel size (-1 if not desired to apply)
+        - bw_size :             bwareaopen remove objects smaller than this size (-1 if not desired to apply)
+        - bw_conn :             bwareaopen neighborhood connectivity (default 8)
+        - channel :             Color channel to use {'g'ray, hs'v' or h'l's }
+        - vacant_threshold :    Threshold (0 to 1) to determine space is vacant depending on pixel count
+    """
+
+    def __init__(self, gb_k, gb_s, at_method, at_blockSize, at_C, median_k=-1, bw_size=-1, bw_conn=8, channel="v", vacant_threshold=0.3):
         self.gb_k = gb_k  # GaussianBlur kernel
         self.gb_s = gb_s  # GaussianBlur sigma (std. deviation)
         self.at_method = at_method  # adaptiveThreshold method
@@ -206,15 +223,13 @@ class DetectionParams:
         self.bw_size = bw_size
         # bwareaopen neighborhood connectivity (default 8)
         self.bw_conn = bw_conn
+        # Color channel to use {'g'ray, hs'v' or h'l's }
+        self.channel = channel
+        # Threshold (0 to 1) to determine space is vacant depending on pixel count
+        self.vacant_threshold = vacant_threshold
 
 
-# params01 = DetectionParams((5,5), 0, cv.ADAPTIVE_THRESH_GAUSSIAN_C, 27, 7, 3, 85) #
-params01 = DetectionParams(
-    (5, 5), 0, cv.ADAPTIVE_THRESH_GAUSSIAN_C, 33, 7, 3, 85)  # UPR05
-# params01 = DetectionParams((5,5), 0, cv.ADAPTIVE_THRESH_GAUSSIAN_C, 29, 16, 3, 25) # UFPR04
-
-
-def preProcess(img, showImshow=False, params=params01, channel="v"):
+def preProcess(img: cv.Mat, params: DetectionParams, showImshow: bool = False) -> cv.Mat:
     # imgGray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
     imgHLS = cv.cvtColor(img, cv.COLOR_BGR2HLS)
@@ -228,9 +243,9 @@ def preProcess(img, showImshow=False, params=params01, channel="v"):
     # cv.imshow("imgGray", imgGray)
     # cv.waitKey(0)
 
-    if(channel == "l"):
+    if(params.channel == "l"):
         imgGray = l
-    elif(channel == "v"):
+    elif(params.channel == "v"):
         imgGray = v
 
     if(params.gb_k == None):
@@ -304,8 +319,6 @@ def setupPreprocess(img):
 
 
 # SPACE DETECTION IN XML
-
-
 def get_points_xml(space):
     vertex = []
     for p in space.contour.find_all('point'):
@@ -313,8 +326,7 @@ def get_points_xml(space):
     return np.array(vertex, dtype=np.int32)
 
 
-def detect_batch(files, params, k=0.3, showConfusionMatrix=True, showImshow=False, setup=False, channel="v"):
-
+def detect_batch(files, params: DetectionParams, showConfusionMatrix=True, showImshow=False, setup=False):
     predicted = []
     real = []
 
@@ -328,7 +340,7 @@ def detect_batch(files, params, k=0.3, showConfusionMatrix=True, showImshow=Fals
 
         if(setup):
             setupPreprocess(img)
-        imgPre = preProcess(img, showImshow, params, channel)
+        imgPre = preProcess(img, showImshow, params)
 
         # Get spaces from xml
         with open(filename.replace('.jpg', '.xml'), 'r') as f:
@@ -354,7 +366,7 @@ def detect_batch(files, params, k=0.3, showConfusionMatrix=True, showImshow=Fals
 
             # drawSpaceSeg(img, vertex, count)
             # Depending on the detection area
-            vacant = is_space_vacant(points, count, k)
+            vacant = is_space_vacant(points, count, params.vacant_threshold)
 
             vacant_real = space.get('occupied') == "0"
             predicted.append(vacant)
@@ -404,14 +416,14 @@ def detect_batch(files, params, k=0.3, showConfusionMatrix=True, showImshow=Fals
     return confusion_matrix
 
 
-def detect_image(filename, params, k=0.26, channel="v"):
+def detect_image(filename, params: DetectionParams):
     predicted = []
     real = []
 
     # SPACE OCCUPATION DETECTION
     parking_img = cv.imread(filename)
     img = parking_img
-    imgPre = preProcess(img, False, params, channel)
+    imgPre = preProcess(img, params)
 
     # Get spaces from xml
     with open(filename.replace('.jpg', '.xml'), 'r') as f:
@@ -434,7 +446,7 @@ def detect_image(filename, params, k=0.26, channel="v"):
         count = cv.countNonZero(roi)
 
         # Depending on the detection area
-        vacant = is_space_vacant(points, count, k)
+        vacant = is_space_vacant(points, count, params.vacant_threshold)
 
         vacant_real = space.get('occupied') == "0"
         predicted.append(vacant)
@@ -448,11 +460,11 @@ def detect_wrapper(args):
     return detect_image(*args)
 
 
-def process_batch(files, params, k=0.3, channel="v"):
+def process_batch(files, params):
     num_cores = multiprocessing.cpu_count()
     print(f"Processing {len(files)} files with {num_cores} cores")
 
-    args = [(img, params, k, channel)
+    args = [(img, params)
             for img in files]  # lista de tuplas con argumentos
 
     with ThreadPoolExecutor(max_workers=num_cores) as pool:
