@@ -460,7 +460,7 @@ def detect_wrapper(args):
     return detect_image(*args)
 
 
-def process_batch(files, params):
+def process_batch(files, params: DetectionParams):
     num_cores = multiprocessing.cpu_count()
     print(f"Processing {len(files)} files with {num_cores} cores")
 
@@ -495,16 +495,31 @@ def process_batch(files, params):
 
 
 def show_confusion_matrix(confusion_matrix, real, predicted):
+    tn, fp, fn, tp = metrics.confusion_matrix(real, predicted).ravel()
+
     # Precision Score = TP / (FP + TP). Minimize FP
-    print('Precision: %.3f' % metrics.precision_score(real, predicted))
+    precision = tp / (fp+tp)
+    print('Precision: %.3f' % precision)
+
+    # Specificity score = TN / (TN+FP)
+    specificity = tn / (tn+fp)
+    print('specificity: %.3f' % specificity)
+
     # Recall Score = TP / (FN + TP). Minimize FN
-    print('Recall: %.3f' % metrics.recall_score(real, predicted))
+    recall = tp / (fn+tp)
+    print('Recall: %.3f' % recall)
+
     # F1 Score = 2* Precision Score * Recall Score/ (Precision Score + Recall Score/) . Minimize FN over minimizing FP
-    print('F1 Score: %.3f' % metrics.f1_score(real, predicted))
+    f1 = 2*precision*recall / (precision + recall)
+    print('F1 Score: %.3f' % f1)
+
     # Accuracy Score = (TP + TN)/ (TP + FN + TN + FP)
-    print('Accuracy: %.3f' % metrics.accuracy_score(real, predicted))
+    accuracy = (tp+tn) / (tp+fn+tn+fp)
+    print('Accuracy: %.3f' % accuracy)
 
     cm_display = metrics.ConfusionMatrixDisplay(
         confusion_matrix=confusion_matrix, display_labels=['Occupied', 'Vacant'])
     cm_display.plot()
     plt.show()
+
+    return precision, specificity, recall, f1, accuracy

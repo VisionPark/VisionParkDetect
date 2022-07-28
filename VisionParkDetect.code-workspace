@@ -5,6 +5,6 @@
 		}
 	],
 	"settings": {
-		"jupyter.notebookFileRoot": "${workspaceFolder}"
+		"python.defaultInterpreterPath": "VisionParkDetectEnv/Scripts/python.exe"
 	}
 }
