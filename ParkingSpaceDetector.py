@@ -148,7 +148,7 @@ def on_trackbar(a):
 def bwareaopen(imgOriginal, min_size, connectivity=8):
     """
     https://stackoverflow.com/questions/2348365/matlab-bwareaopen-equivalent-function-in-opencv
-    Remove small objects from binary image (approximation of 
+    Remove small objects from binary image (approximation of
     bwareaopen in Matlab for 2D images).
 
     Args:
@@ -197,7 +197,7 @@ def is_space_vacant(vertex, count, vacant_threshold) -> bool:
 
 class DetectionParams:
     """ # Parameters used for detecting space occupancy.
-        ## Attributes:
+        # Attributes:
         - gb_k :                GaussianBlur kernel
         - gb_s :                GaussianBlur sigma (std. deviation)
         - at_method :           adaptiveThreshold method
@@ -210,7 +210,7 @@ class DetectionParams:
         - vacant_threshold :    Threshold (0 to 1) to determine space is vacant depending on pixel count
     """
 
-    def __init__(self, gb_k, gb_s, at_method, at_blockSize, at_C, median_k=-1, bw_size=-1, bw_conn=8, channel="v", vacant_threshold=0.3):
+    def __init__(self, gb_k, gb_s, at_method, at_blockSize, at_C, median_k=-1, bw_size=-1, bw_conn=8, channel="v", vacant_threshold=0.3, show_imshow=False):
         self.gb_k = gb_k  # GaussianBlur kernel
         self.gb_s = gb_s  # GaussianBlur sigma (std. deviation)
         self.at_method = at_method  # adaptiveThreshold method
@@ -227,9 +227,10 @@ class DetectionParams:
         self.channel = channel
         # Threshold (0 to 1) to determine space is vacant depending on pixel count
         self.vacant_threshold = vacant_threshold
+        self.show_imshow = show_imshow
 
 
-def preProcess(img: cv.Mat, params: DetectionParams, showImshow: bool = False) -> cv.Mat:
+def preProcess(img: cv.Mat, params: DetectionParams) -> cv.Mat:
     # imgGray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
     imgHLS = cv.cvtColor(img, cv.COLOR_BGR2HLS)
@@ -255,16 +256,16 @@ def preProcess(img: cv.Mat, params: DetectionParams, showImshow: bool = False) -
 
     imgThreshold = cv.adaptiveThreshold(
         imgBlur, 255, params.at_method, cv.THRESH_BINARY_INV, params.at_blockSize, params.at_C)
-    #a,imgThreshold2 = cv.threshold(imgBlur,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
+    # a,imgThreshold2 = cv.threshold(imgBlur,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
     # cv.imshow("IMGTresh", imgThreshold)
 
     # Remove salt and pepper noise
     if(params.median_k != -1):
         imgMedian = cv.medianBlur(imgThreshold, 3)
-        if(showImshow):
-            cv.imshow("IMGBlur", imgBlur)
-            cv.imshow("IMGTresh", imgThreshold)
-            cv.imshow("IMGMedian", imgMedian)
+        if(params.show_imshow):
+            cv.imshow("1 - IMGBlur", imgBlur)
+            cv.imshow("2 - IMGTresh", imgThreshold)
+            cv.imshow("3 - IMGMedian", imgMedian)
 
     # Make thicker edges
     # kernel = np.ones((5,5), np.uint8)
@@ -274,8 +275,8 @@ def preProcess(img: cv.Mat, params: DetectionParams, showImshow: bool = False) -
     # Remove small objects
     if(params.bw_size != -1):
         imgBw = bwareaopen(imgMedian, 85)
-        if(showImshow):
-            cv.imshow("imgBw", imgBw)
+        if(params.show_imshow):
+            cv.imshow("4 - imgBw", imgBw)
     # cv.imshow("IMG Dilate", imgDilate)
 
     return imgBw
@@ -299,7 +300,7 @@ def setupPreprocess(img):
 
         imgThreshold = cv.adaptiveThreshold(
             imgBlur, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, blocksize, c)
-        #imgThreshold2 = cv.threshold(imgBlur,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
+        # imgThreshold2 = cv.threshold(imgBlur,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
         imgMedian = cv.medianBlur(imgThreshold, 5)
         # imgEro = cv.erode(imgMedian, kernel, iterations=1)
         # imgDilate = cv.dilate(imgEro, kernel, iterations=1)
@@ -307,18 +308,19 @@ def setupPreprocess(img):
         bwThresh = cv.getTrackbarPos("Threshold BW", "Trackbars")
         imgBw = bwareaopen(imgThreshold, bwThresh)
 
-        cv.imshow("IMG", img)
-        cv.imshow("IMGTresh", imgThreshold)
-        cv.imshow("IMGMedian", imgMedian)
-        cv.imshow("IMG BW", imgBw)
+        cv.imshow("0 - IMG", img)
+        cv.imshow("1 - IMGTresh", imgThreshold)
+        cv.imshow("2 - IMGMedian", imgMedian)
+        cv.imshow("3 - IMG BW", imgBw)
         # cv.imshow("IMG Dilate", imgDilate)
 
         if cv.waitKey(1) == 27:         # wait for ESC key to exit and terminate progra,
             cv.destroyAllWindows()
             quit()
 
-
 # SPACE DETECTION IN XML
+
+
 def get_points_xml(space):
     vertex = []
     for p in space.contour.find_all('point'):
@@ -326,7 +328,7 @@ def get_points_xml(space):
     return np.array(vertex, dtype=np.int32)
 
 
-def detect_batch(files, params: DetectionParams, showConfusionMatrix=True, showImshow=False, setup=False):
+def detect_batch(files, params: DetectionParams, showConfusionMatrix=True, setup=False):
     predicted = []
     real = []
 
@@ -340,7 +342,7 @@ def detect_batch(files, params: DetectionParams, showConfusionMatrix=True, showI
 
         if(setup):
             setupPreprocess(img)
-        imgPre = preProcess(img, showImshow, params)
+        imgPre = preProcess(img, params)
 
         # Get spaces from xml
         with open(filename.replace('.jpg', '.xml'), 'r') as f:
@@ -372,7 +374,7 @@ def detect_batch(files, params: DetectionParams, showConfusionMatrix=True, showI
             predicted.append(vacant)
             real.append(vacant_real)
 
-            if(showImshow):
+            if(params.show_imshow):
                 space_area = area(points)
                 assert(space_area > 0)
                 drawSpaceSeg(img, np.array(points, np.int32), count, not vacant, min(
@@ -382,17 +384,14 @@ def detect_batch(files, params: DetectionParams, showConfusionMatrix=True, showI
                     print("Pixel count: "+str(count))
                     print(f"Area: {space_area} k={count/space_area}")
                     print("---------------------------------")
-                    cv.namedWindow("roi")
-                    cv.destroyWindow("roi")
-                    cv.imshow("roi", roi)
-                    cv.imshow("IMG with space seg", img)
-                    cv.waitKey()
+                cv.namedWindow("roi")
+                cv.destroyWindow("roi")
+                cv.imshow("roi", roi)
+                cv.imshow("IMG with space seg", img)
 
-        if(showImshow):
-            cv.imshow("IMG with space seg", img)
-            key = cv.waitKey()
-            if(key == 27):
-                break
+                key = cv.waitKey()
+                if(key == 27):
+                    break
 
     confusion_matrix = metrics.confusion_matrix(real, predicted)
     if(showConfusionMatrix):
@@ -410,7 +409,7 @@ def detect_batch(files, params: DetectionParams, showConfusionMatrix=True, showI
         cm_display.plot()
         plt.show()
 
-    if(showImshow):
+    if(params.show_imshow):
         cv.destroyAllWindows()
 
     return confusion_matrix
