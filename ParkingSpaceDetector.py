@@ -208,6 +208,7 @@ class DetectionParams:
         - bw_conn :             bwareaopen neighborhood connectivity (default 8)
         - channel :             Color channel to use {'g'ray, hs'v' or h'l's }
         - vacant_threshold :    Threshold (0 to 1) to determine space is vacant depending on pixel count
+        - show_imshow :         Show debug windows
     """
 
     def __init__(self, gb_k, gb_s, at_method, at_blockSize, at_C, median_k=-1, bw_size=-1, bw_conn=8, channel="v", vacant_threshold=0.3, show_imshow=False):
@@ -227,6 +228,7 @@ class DetectionParams:
         self.channel = channel
         # Threshold (0 to 1) to determine space is vacant depending on pixel count
         self.vacant_threshold = vacant_threshold
+        # Show debug windows
         self.show_imshow = show_imshow
 
 
@@ -261,7 +263,7 @@ def preProcess(img: cv.Mat, params: DetectionParams) -> cv.Mat:
 
     # Remove salt and pepper noise
     if(params.median_k != -1):
-        imgMedian = cv.medianBlur(imgThreshold, 3)
+        imgMedian = cv.medianBlur(imgThreshold, params.median_k)
         if(params.show_imshow):
             cv.imshow("1 - IMGBlur", imgBlur)
             cv.imshow("2 - IMGTresh", imgThreshold)
@@ -282,41 +284,68 @@ def preProcess(img: cv.Mat, params: DetectionParams) -> cv.Mat:
     return imgBw
 
 
-def setupPreprocess(img):
+def setup_preprocess(img):
     imgGray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    imgBlur = cv.GaussianBlur(imgGray, (5, 5), 0)
 
     cv.namedWindow("Trackbars")
-    cv.resizeWindow("Trackbars", 640, 240)
-    cv.createTrackbar("Threshold Blocksize", "Trackbars", 25, 100, on_trackbar)
-    cv.createTrackbar("Threshold C", "Trackbars", 16, 100, on_trackbar)
-    cv.createTrackbar("Threshold BW", "Trackbars", 20, 500, on_trackbar)
+    cv.createTrackbar("1-Gauss Kernel", "Trackbars", 3, 25, on_trackbar)
+    cv.createTrackbar("2-Blocksize", "Trackbars", 25, 100, on_trackbar)
+    cv.createTrackbar("2-C", "Trackbars", 16, 100, on_trackbar)
+    cv.createTrackbar("3-Median Kernel", "Trackbars", 3, 25, on_trackbar)
+    cv.createTrackbar("4-BW Threshold", "Trackbars", 20, 500, on_trackbar)
+
+    cv.imshow("0 - IMG", img)
 
     while True:
-        blocksize = cv.getTrackbarPos("Threshold Blocksize", "Trackbars")
-        c = cv.getTrackbarPos("Threshold C", "Trackbars")
-        if blocksize % 2 == 0 or blocksize == 0:
-            blocksize = blocksize+1
+        try:
+            gauss_kernel_size = cv.getTrackbarPos(
+                "1-Gauss Kernel", "Trackbars")
+            if gauss_kernel_size % 2 == 0:
+                gauss_kernel_size = gauss_kernel_size+1
 
-        imgThreshold = cv.adaptiveThreshold(
-            imgBlur, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, blocksize, c)
-        # imgThreshold2 = cv.threshold(imgBlur,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
-        imgMedian = cv.medianBlur(imgThreshold, 5)
-        # imgEro = cv.erode(imgMedian, kernel, iterations=1)
-        # imgDilate = cv.dilate(imgEro, kernel, iterations=1)
+            if gauss_kernel_size >= 3:
+                imgBlur = cv.GaussianBlur(
+                    imgGray, (gauss_kernel_size, gauss_kernel_size), 0)
+            else:
+                imgBlur = imgGray
 
-        bwThresh = cv.getTrackbarPos("Threshold BW", "Trackbars")
-        imgBw = bwareaopen(imgThreshold, bwThresh)
+            blocksize = cv.getTrackbarPos("2-Blocksize", "Trackbars")
+            c = cv.getTrackbarPos("2-C", "Trackbars")
+            if blocksize % 2 == 0 or blocksize == 0:
+                blocksize = blocksize+1
 
-        cv.imshow("0 - IMG", img)
-        cv.imshow("1 - IMGTresh", imgThreshold)
-        cv.imshow("2 - IMGMedian", imgMedian)
-        cv.imshow("3 - IMG BW", imgBw)
-        # cv.imshow("IMG Dilate", imgDilate)
+            imgThreshold = cv.adaptiveThreshold(
+                imgBlur, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, blocksize, c)
+            # imgThreshold2 = cv.threshold(imgBlur,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
 
-        if cv.waitKey(1) == 27:         # wait for ESC key to exit and terminate progra,
+            median_kernel_size = cv.getTrackbarPos(
+                "3-Median Kernel", "Trackbars")
+
+            if median_kernel_size % 2 == 0:
+                median_kernel_size = median_kernel_size+1
+
+            if median_kernel_size >= 3:
+                imgMedian = cv.medianBlur(imgThreshold, median_kernel_size)
+            else:
+                imgMedian = imgThreshold
+
+            # imgEro = cv.erode(imgMedian, kernel, iterations=1)
+            # imgDilate = cv.dilate(imgEro, kernel, iterations=1)
+
+            bwThresh = cv.getTrackbarPos("4-BW Threshold", "Trackbars")
+            imgBw = bwareaopen(imgMedian, bwThresh)
+
+            cv.imshow("1 - IMG Blur", imgBlur)
+            cv.imshow("2 - IMGTresh", imgThreshold)
+            cv.imshow("3 - IMGMedian", imgMedian)
+            cv.imshow("4 - IMG BW", imgBw)
+            # cv.imshow("IMG Dilate", imgDilate)
+
+            if cv.waitKey(1) == 27:         # wait for ESC key to exit and terminate progra,
+                cv.destroyAllWindows()
+                break
+        except:
             cv.destroyAllWindows()
-            quit()
 
 # SPACE DETECTION IN XML
 
@@ -328,7 +357,7 @@ def get_points_xml(space):
     return np.array(vertex, dtype=np.int32)
 
 
-def detect_batch(files, params: DetectionParams, showConfusionMatrix=True, setup=False):
+def detect_batch(files, params: DetectionParams, showConfusionMatrix=True):
     predicted = []
     real = []
 
@@ -340,8 +369,6 @@ def detect_batch(files, params: DetectionParams, showConfusionMatrix=True, setup
         parking_img = cv.imread(filename)
         img = parking_img
 
-        if(setup):
-            setupPreprocess(img)
         imgPre = preProcess(img, params)
 
         # Get spaces from xml
