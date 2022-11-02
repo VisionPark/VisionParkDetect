@@ -1,41 +1,45 @@
 
-from operator import is_
-from src.data.ParkingProvider import ParkingProvider
+from datetime import datetime
+from src.data.ParkingProvider import ParkingProvider, ParkingProviderParams
 from src.data.entity.Space import Space
 import cv2 as cv
 import glob
 import random
 from bs4 import BeautifulSoup  # read XML
 import numpy as np
-from datetime import datetime
+from sys import path
+path.append("../")
+
+
+class ParkingProviderLocalParams(ParkingProviderParams):
+    def __init__(self, parking_id, path, k):
+        super().__init__(parking_id)
+        self.path = path
+        self.k = k
 
 
 class ParkingProviderLocal(ParkingProvider):
 
-    class ParkingProviderLocalParams(ParkingProvider.ParkingProviderParams):
-        def __init__(self, parking_id, path, k):
-            super().__init__(parking_id)
-            self.path = path
-            self.k = k
-
     def __init__(self, params: ParkingProviderLocalParams):
+        super().__init__(params)
         path = params.path  # Path to folder with images and spaces files
-        k = params.k   # 1/k random files to select
-        index = 0
+        self.k = params.k   # 1/k random files to select
+        self.index = 0
 
         files = glob.glob(path + '/**/*.jpg', recursive=True)
-        img_files = random.choices(files, k=int(len(files)/4))
+        self.img_files = random.choices(files, k=int(len(files)/self.k))
         self.spaces_files = [file.replace('.jpg', '.xml')
-                             for file in img_files]
+                             for file in self.img_files]
+        print(f'Selected {len(self.img_files)} files')
 
-    def fetch_image(self) -> cv.Mat:
+    def fetch_image(self) -> tuple[cv.Mat, datetime]:
         # Read and return next image
         if self.index < len(self.img_files):
-            img = cv.imread(self.img_files(self.index))
+            img = cv.imread(self.img_files[self.index])
             self.index += 1
-            return img
+            return img, datetime.now()
         else:
-            return cv.Mat()
+            return cv.Mat(), datetime.now()
 
     def fetch_spaces(self) -> list[Space]:
 
@@ -43,7 +47,7 @@ class ParkingProviderLocal(ParkingProvider):
             spaces_list = []
 
             # Open XML file
-            with open(self.spaces_files(self.index), 'r') as f:
+            with open(self.spaces_files[self.index], 'r') as f:
                 file = f.read()
             data = BeautifulSoup(file, "xml")
 
@@ -61,7 +65,7 @@ class ParkingProviderLocal(ParkingProvider):
 
                 # Build the space object
                 new_space = Space(id, vertex)
-                new_space.real = is_vacant_real
+                new_space.is_vacant_real = is_vacant_real
 
                 spaces_list.append(new_space)
 
@@ -73,6 +77,9 @@ class ParkingProviderLocal(ParkingProvider):
     def update_spaces_occupancy(self, spaces: list[Space]):
         pass
 
+    def get_parking_name(self, parking_id):
+        return str(parking_id)
+
     @staticmethod
     def get_points_xml(space_xml):
         vertex = []
@@ -81,6 +88,6 @@ class ParkingProviderLocal(ParkingProvider):
         return np.array(vertex, dtype=np.int32)
 
     @staticmethod
-    def get_random_files(path, k) -> list(str):
+    def get_random_files(path, k) -> list[str]:
         files = glob.glob(path + '/**/*.jpg', recursive=True)
         return random.choices(files, k=k)

@@ -4,6 +4,8 @@ from src.metrics.PerformanceMetricsProvider import PerformanceMetricsProvider
 
 
 class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
+    def __init__(self,  *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def calculate_metrics(self):
         tn, fp, fn, tp = metrics.confusion_matrix(
@@ -34,16 +36,15 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
     # Override abstract method
 
     def show_confusion_matrix(self):
-
-        print('Precision: %.3f' % self.detection_result.stats.precision)
-        print('specificity: %.3f' % self.detection_result.stats.specificity)
-        print('Recall: %.3f' % self.detection_result.stats.recall)
-        print('F1 Score: %.3f' % self.detection_result.stats.f1)
-        print('Accuracy: %.3f' % self.detection_result.stats.accuracy)
+        print('Precision: %.3f' % self.metrics.precision)
+        print('specificity: %.3f' % self.metrics.specificity)
+        print('Recall: %.3f' % self.metrics.recall)
+        print('F1 Score: %.3f' % self.metrics.f1)
+        print('Accuracy: %.3f' % self.metrics.accuracy)
 
         cm_display = metrics.ConfusionMatrixDisplay(
             confusion_matrix=metrics.confusion_matrix(
-                self.detection_result.real, self.detection_result.predicted),
+                self.real, self.predicted),
             display_labels=['Occupied', 'Vacant'])
         cm_display.plot()
         plt.show()

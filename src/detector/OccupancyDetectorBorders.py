@@ -9,9 +9,12 @@ from datetime import datetime
 
 class OccupancyDetectorBorders(OccupancyDetector):
 
+    def __init__(self, params: DetectionParams):
+        super().__init__(params)
+
     def detect_image(self, parking_img: cv.Mat, parking_img_date: datetime, spaces: list[Space]):
 
-        imgPre = self.preProcess(parking_img, self.params)
+        imgPre = self.preProcess(parking_img)
 
         for space in spaces:
             vertex = space.vertex
@@ -62,7 +65,7 @@ class OccupancyDetectorBorders(OccupancyDetector):
         elif(self.params.channel == "v"):
             imgGray = v
 
-        if(self.params.gb_k == None):
+        if(self.params.gb_k is None):
             imgBlur = imgGray
         else:
             imgBlur = cv.GaussianBlur(
@@ -90,7 +93,8 @@ class OccupancyDetectorBorders(OccupancyDetector):
 
         # Remove small objects
         if(self.params.bw_size != -1):
-            imgBw = self.bwareaopen(imgMedian, self.params.bw_size)
+            imgBw = OccupancyDetectorBorders.bwareaopen(
+                imgMedian, self.params.bw_size)
             if(self.params.show_imshow):
                 cv.imshow("4 - imgBw", imgBw)
         else:
@@ -99,7 +103,7 @@ class OccupancyDetectorBorders(OccupancyDetector):
 
         return imgBw
 
-    def bwareaopen(img_input, min_size, connectivity=8):
+    def bwareaopen(img_input: cv.Mat, min_size: int, connectivity=8):
         """
         https://stackoverflow.com/questions/2348365/matlab-bwareaopen-equivalent-function-in-opencv
         Remove small objects from binary image (approximation of

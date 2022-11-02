@@ -1,13 +1,11 @@
 
 from src.data.ParkingProvider import ParkingProvider
 import json
-
 import ParkingProvider
 from src.data.entity.Space import Space
 import cv2 as cv
 import numpy as np
 import sqlite3
-from datetime import datetime
 
 
 class ParkingProviderSqlite(ParkingProvider):
@@ -18,9 +16,9 @@ class ParkingProviderSqlite(ParkingProvider):
             self.db_file = db_file
 
     def __init__(self, params: ParkingProvider.ParkingProviderSqliteParams):
-        db_file = params.db_file  # Path to sqlite database file
-        parking_id = params.parking_id
-        con = sqlite3.connect(db_file)
+        self.db_file = params.db_file  # Path to sqlite database file
+        self.parking_id = params.parking_id
+        self.con = sqlite3.connect(self.db_file)
 
     def fetch_image(self) -> cv.Mat:
         # TODO

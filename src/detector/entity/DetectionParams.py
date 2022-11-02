@@ -1,3 +1,6 @@
+from sys import path
+path.append("../../")
+
 
 class DetectionParams:
     """ # Parameters used for detecting space occupancy.

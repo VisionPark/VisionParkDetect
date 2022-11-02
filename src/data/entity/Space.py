@@ -7,12 +7,13 @@ class Space:
     """
 
     def __init__(self, id, vertex=None, short_name: str = id, is_vacant: bool = False, since: datetime = datetime.now(), is_vacant_real=None):
-        id = id
-        short_name = short_name
-        is_vacant_real = is_vacant_real
-        is_vacant = is_vacant
-        since = since
-        if vertex == None:
-            vertex = np.array([])
+        self.id = id
+        self.short_name = short_name
+        self.is_vacant_real = is_vacant_real
+        self.is_vacant = is_vacant
+        self.since = since
+
+        if vertex is None:
+            self.vertex = np.array([])
         else:
-            vertex = vertex
+            self.vertex = vertex

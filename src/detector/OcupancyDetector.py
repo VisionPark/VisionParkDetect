@@ -10,7 +10,7 @@ import cvzone
 class OccupancyDetector(ABC):
 
     def __init__(self,  params: DetectionParams):
-        params = params
+        self.params = params
 
     @abstractmethod
     def detect_image(self, parking_img: cv.Mat,  parking_img_date: datetime, spaces: list[Space]):

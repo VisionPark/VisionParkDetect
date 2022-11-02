@@ -1,20 +1,22 @@
 # https://stackoverflow.com/questions/2124190/how-do-i-implement-interfaces-in-python
-from abc import ABC, abstractmethod
-from src.data.entity.Parking import Parking
-from src.data.entity.Space import Space
-import cv2 as cv
 from datetime import datetime
+import cv2 as cv
+from src.data.entity.Space import Space
+from src.data.entity.Parking import Parking
+from abc import ABC, abstractmethod
+from sys import path
+path.append("../")
+
+
+class ParkingProviderParams(ABC):
+    def __init__(self, parking_id):
+        self.parking_id = parking_id
 
 
 class ParkingProvider(ABC):
 
-    class ParkingProviderParams(ABC):
-        def __init__(self, parking_id):
-            self.parking_id = parking_id
-
-    @abstractmethod
     def __init__(self, params: ParkingProviderParams):
-        pass
+        self.params = params
 
     @abstractmethod
     def fetch_image(self) -> tuple[cv.Mat, datetime]:

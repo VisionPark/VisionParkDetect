@@ -8,9 +8,16 @@ class PerformanceMetricsProvider(ABC):
         self.metrics = metrics
 
     def __init__(self, spaces: list[Space]):
-        real, predicted = self.get_real_predicted(spaces)
-        self.metrics = PerformanceMetrics(real, predicted)
+        self.real, self.predicted = PerformanceMetricsProvider.get_real_predicted(
+            spaces)
+        self.metrics = PerformanceMetrics(self.real, self.predicted)
 
+    def __init__(self):
+        self.real = []
+        self.predicted = []
+        self.metrics = PerformanceMetrics(self.real, self.predicted)
+
+    @staticmethod
     def get_real_predicted(spaces: list[Space]):
         real = []
         predicted = []
@@ -20,6 +27,10 @@ class PerformanceMetricsProvider(ABC):
             predicted.append(space.is_vacant)
 
         return real, predicted
+
+    def add_real_predicted(self, real, predicted):
+        self.real.extend(real)
+        self.predicted.extend(predicted)
 
     @abstractmethod
     def calculate_metrics(self):
