@@ -1,4 +1,4 @@
-
+from src.data.ParkingProvider import NoSpacesException, NoImageException
 from src.data.ParkingProvider import ParkingProvider
 import json
 import ParkingProvider
@@ -29,7 +29,7 @@ class ParkingProviderSqlite(ParkingProvider):
         elif self.parking_id == 'PUCPR':
             return cv.imread('E:\OneDrive - UNIVERSIDAD DE HUELVA\TFG\VisionParkDetect\dataset/PUCPR_sample.jpg')
         else:
-            return cv.Mat()
+            raise NoImageException('parking_id not valid')
 
     def fetch_spaces(self) -> list[Space]:
         spaces_list = []

@@ -15,7 +15,7 @@ class ParkingOccupancyProcessor(ABC):
     def __init__(self, parking_provider_params: ParkingProviderParams, detection_params: DetectionParams, performance_metrics_provider: PerformanceMetricsProvider):
 
         # Overriden by child implementation
-        # self.parking_provider = ParkingProvider(parking_provider_params)
+        self.parking_provider = None
 
         self.occupancy_detector: OccupancyDetector = OccupancyDetectorBorders(
             detection_params)

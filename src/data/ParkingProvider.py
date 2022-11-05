@@ -8,6 +8,14 @@ from sys import path
 path.append("../")
 
 
+class NoSpacesException(Exception):
+    pass
+
+
+class NoImageException(Exception):
+    pass
+
+
 class ParkingProviderParams(ABC):
     def __init__(self, parking_id):
         self.parking_id = parking_id
@@ -18,10 +26,16 @@ class ParkingProvider(ABC):
     def __init__(self, params: ParkingProviderParams):
         self.params = params
 
+    """
+    Raises StopIteration
+    """
     @abstractmethod
     def fetch_image(self) -> tuple[cv.Mat, datetime]:
         pass
 
+    """
+    Raises StopIteration
+    """
     @abstractmethod
     def fetch_spaces(self) -> list[Space]:
         pass

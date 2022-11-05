@@ -1,4 +1,5 @@
 
+from src.data.ParkingProvider import NoSpacesException, NoImageException
 from datetime import datetime
 from src.data.ParkingProvider import ParkingProvider, ParkingProviderParams
 from src.data.entity.Space import Space
@@ -30,7 +31,11 @@ class ParkingProviderLocal(ParkingProvider):
         self.img_files = random.choices(files, k=int(len(files)/self.k))
         self.spaces_files = [file.replace('.jpg', '.xml')
                              for file in self.img_files]
-        print(f'Selected {len(self.img_files)} files')
+        self.num_files = len(self.img_files)
+        print(f'Selected {self.num_files} files')
+
+    def get_num_files(self):
+        return self.num_files
 
     def fetch_image(self) -> tuple[cv.Mat, datetime]:
         # Read and return next image
@@ -39,7 +44,7 @@ class ParkingProviderLocal(ParkingProvider):
             self.index += 1
             return img, datetime.now()
         else:
-            return cv.Mat(), datetime.now()
+            raise NoImageException('Finished fetching path')
 
     def fetch_spaces(self) -> list[Space]:
 
@@ -72,7 +77,7 @@ class ParkingProviderLocal(ParkingProvider):
             return spaces_list
 
         else:
-            return []
+            raise NoSpacesException('Finished fetching path')
 
     def update_spaces_occupancy(self, spaces: list[Space]):
         pass
