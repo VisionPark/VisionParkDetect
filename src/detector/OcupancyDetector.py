@@ -17,13 +17,6 @@ class OccupancyDetector(ABC):
         return
 
     @staticmethod
-    def imshow(img, title=''):
-        while(1):
-            cv.imshow(title, img)
-            if cv.waitKey(20) & 0xFF == 27:
-                break
-
-    @staticmethod
     def on_trackbar(a):
         pass
 
@@ -65,7 +58,7 @@ class OccupancyDetector(ABC):
         cv.destroyAllWindows()
 
     @staticmethod
-    def drawSpaceSeg(img, vertex, count, occupied, col_min, row_max, space_area, real_occupied=None):
+    def drawSpaceSeg(img, vertex, occupied, col_min, row_max, space_area, real_occupied=None, count=None):
         if real_occupied is not None:
             if not occupied and not real_occupied:  # True positive
                 cv.polylines(img, [vertex], True, (0, 255, 0), thickness=2)
@@ -82,9 +75,10 @@ class OccupancyDetector(ABC):
                 cv.polylines(img, [vertex], True, (0, 0, 255), thickness=2)
 
         # Pixel count
-        text = str(round(count/space_area, 3))
-        cvzone.putTextRect(img, text, (col_min, row_max-3),
-                           scale=0.8, thickness=1, offset=0)
+        if(count is not None):
+            text = str(round(count/space_area, 3))
+            cvzone.putTextRect(img, text, (col_min, row_max-3),
+                               scale=0.8, thickness=1, offset=0)
         return img
 
     @staticmethod

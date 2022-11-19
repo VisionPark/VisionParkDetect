@@ -39,3 +39,7 @@ class PerformanceMetricsProvider(ABC):
     @abstractmethod
     def show_confusion_matrix(self):
         pass
+
+    @abstractmethod
+    def show_dataframe(metrics_list, row_names):
+        pass

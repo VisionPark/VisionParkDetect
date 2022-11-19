@@ -2,6 +2,7 @@
 from src.data.ParkingProvider import NoSpacesException, NoImageException
 from datetime import datetime
 from src.data.ParkingProvider import ParkingProvider, ParkingProviderParams
+from src.data.entity.Parking import Parking
 from src.data.entity.Space import Space
 import cv2 as cv
 import glob
@@ -41,7 +42,6 @@ class ParkingProviderLocal(ParkingProvider):
         # Read and return next image
         if self.index < len(self.img_files):
             img = cv.imread(self.img_files[self.index])
-            self.index += 1
             return img, datetime.now()
         else:
             raise NoImageException('Finished fetching path')
@@ -84,6 +84,11 @@ class ParkingProviderLocal(ParkingProvider):
 
     def get_parking_name(self, parking_id):
         return str(parking_id)
+
+    def get_parking(self) -> Parking:
+        parking = super().get_parking()
+        self.index += 1  # Increment index for processing next img,xml
+        return parking
 
     @staticmethod
     def get_points_xml(space_xml):

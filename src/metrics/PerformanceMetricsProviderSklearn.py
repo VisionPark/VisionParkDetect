@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 from sklearn import metrics
 from src.metrics.PerformanceMetricsProvider import PerformanceMetricsProvider
+import pandas as pd
+
+from src.metrics.entity.PerformanceMetrics import PerformanceMetrics
 
 
 class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
@@ -48,3 +51,26 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
             display_labels=['Occupied', 'Vacant'])
         cm_display.plot()
         plt.show()
+
+    @staticmethod
+    def show_dataframe(metrics_list: list[PerformanceMetrics], row_names: list[str]):
+        precision_total = [
+            metrics_list[i].precision for i in range(len(metrics_list))]
+        specificity_total = [
+            metrics_list[i].specificity for i in range(len(metrics_list))]
+        recall_total = [
+            metrics_list[i].recall for i in range(len(metrics_list))]
+        f1_total = [metrics_list[i].f1 for i in range(len(metrics_list))]
+        accuracy_total = [
+            metrics_list[i].accuracy for i in range(len(metrics_list))]
+
+        data = {
+            "precision": precision_total,
+            "specificity": specificity_total,
+            "recall": recall_total,
+            "f1": f1_total,
+            "accuracy": accuracy_total
+        }
+
+        df = pd.DataFrame(data, index=row_names)
+        print(df.round(3))

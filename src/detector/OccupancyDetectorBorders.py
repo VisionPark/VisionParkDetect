@@ -5,6 +5,7 @@ from src.data.entity.Space import Space
 from src.detector.OcupancyDetector import OccupancyDetector
 import cv2 as cv
 from datetime import datetime
+import numpy as np
 
 
 class OccupancyDetectorBorders(OccupancyDetector):

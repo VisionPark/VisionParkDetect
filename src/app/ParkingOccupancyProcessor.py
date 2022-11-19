@@ -7,6 +7,7 @@ from src.metrics.PerformanceMetricsProviderSklearn import PerformanceMetricsProv
 from src.metrics.entity.PerformanceMetrics import PerformanceMetrics
 from src.data.ParkingProvider import ParkingProvider
 from src.data.ParkingProvider import ParkingProviderParams
+import cv2 as cv
 from sys import path
 path.append("../")
 
@@ -22,6 +23,24 @@ class ParkingOccupancyProcessor(ABC):
 
         self.performance_metrics: PerformanceMetricsProvider = performance_metrics_provider
 
+    def getDetectionImg(self, parking_img: cv.Mat, parking_spaces, real, predicted):
+        img = parking_img
+        for i, space in enumerate(parking_spaces):
+
+            if predicted[i] == 1 and real[i] == 1:    # True positive
+                cv.polylines(img, [space.vertex], True,
+                             (0, 255, 0), thickness=2)
+            elif predicted[i] == 0 and real[i] == 0:  # True negative
+                cv.polylines(img, [space.vertex], True,
+                             (0, 0, 255), thickness=2)
+            elif predicted[i] == 0 and real[i] == 1:  # False negative
+                cv.polylines(img, [space.vertex], True,
+                             (58, 146, 255), thickness=2)
+            else:                                 # False positive
+                cv.polylines(img, [space.vertex], True,
+                             (98, 169, 36), thickness=2)
+        return img
+
     def process(self) -> PerformanceMetricsProvider:
 
         parking = self.parking_provider.get_parking()
@@ -33,5 +52,16 @@ class ParkingOccupancyProcessor(ABC):
             parking.spaces)
 
         self.performance_metrics.add_real_predicted(real, predicted)
+
+        if self.occupancy_detector.params.show_imshow:
+            img = self.getDetectionImg(
+                parking.image, parking.spaces, real, predicted)
+
+            cv.imshow("Parking Detection", img)
+            key = cv.waitKey(0)
+
+            if(key == 27):
+                self.params.show_imshow = False
+            cv.destroyAllWindows()
 
         return self.performance_metrics

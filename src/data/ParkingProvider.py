@@ -52,4 +52,5 @@ class ParkingProvider(ABC):
         name = self.get_parking_name(self.params.parking_id)
         [img, img_date] = self.fetch_image()
         spaces = self.fetch_spaces()
+        
         return Parking(self.params.parking_id, name, spaces, img, img_date)
