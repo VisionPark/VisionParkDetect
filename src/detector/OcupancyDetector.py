@@ -17,6 +17,10 @@ class OccupancyDetector(ABC):
         return
 
     @staticmethod
+    def setup_params(parking_img: cv.Mat,  parking_img_date: datetime, spaces: list[Space]) -> DetectionParams:
+        return
+
+    @staticmethod
     def on_trackbar(a):
         pass
 

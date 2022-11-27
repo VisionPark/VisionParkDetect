@@ -14,10 +14,11 @@ path.append("../")
 
 
 class ParkingProviderLocalParams(ParkingProviderParams):
-    def __init__(self, parking_id, path, k):
+    def __init__(self, parking_id, path, k, random_seed=None):
         super().__init__(parking_id)
         self.path = path
         self.k = k
+        self.random_seed = random_seed
 
 
 class ParkingProviderLocal(ParkingProvider):
@@ -28,12 +29,16 @@ class ParkingProviderLocal(ParkingProvider):
         self.k = params.k   # 1/k random files to select
         self.index = 0
 
+        if params.random_seed is not None:
+            random.seed(params.random_seed)
+
         files = glob.glob(path + '/**/*.jpg', recursive=True)
+
         self.img_files = random.choices(files, k=int(len(files)/self.k))
         self.spaces_files = [file.replace('.jpg', '.xml')
                              for file in self.img_files]
         self.num_files = len(self.img_files)
-        print(f'Selected {self.num_files} files')
+        print(f'Selected {self.num_files} files:\n')
 
     def get_num_files(self):
         return self.num_files
@@ -44,6 +49,7 @@ class ParkingProviderLocal(ParkingProvider):
             img = cv.imread(self.img_files[self.index])
             return img, datetime.now()
         else:
+            index = 0
             raise NoImageException('Finished fetching path')
 
     def fetch_spaces(self) -> list[Space]:
@@ -77,6 +83,7 @@ class ParkingProviderLocal(ParkingProvider):
             return spaces_list
 
         else:
+            index = 0
             raise NoSpacesException('Finished fetching path')
 
     def update_spaces_occupancy(self, spaces: list[Space]):

@@ -39,6 +39,74 @@ class OccupancyDetectorBorders(OccupancyDetector):
             space.is_vacant = is_vacant
             space.since = parking_img_date
 
+    def setup_params(parking_img: cv.Mat, spaces: list[Space]) -> DetectionParams:
+
+        def on_trackbar(a):
+            pass
+
+        imgGray = cv.cvtColor(parking_img, cv.COLOR_BGR2GRAY)
+
+        cv.namedWindow("Trackbars")
+        cv.createTrackbar("1-Gauss Kernel", "Trackbars", 3, 25, on_trackbar)
+        cv.createTrackbar("2-Blocksize", "Trackbars", 25, 100, on_trackbar)
+        cv.createTrackbar("2-C", "Trackbars", 16, 100, on_trackbar)
+        cv.createTrackbar("3-Median Kernel", "Trackbars", 3, 25, on_trackbar)
+        cv.createTrackbar("4-BW Threshold", "Trackbars", 20, 500, on_trackbar)
+
+        cv.imshow("0 - IMG", parking_img)
+
+        while True:
+            try:
+                gauss_kernel_size = cv.getTrackbarPos(
+                    "1-Gauss Kernel", "Trackbars")
+                if gauss_kernel_size % 2 == 0:
+                    gauss_kernel_size = gauss_kernel_size+1
+
+                if gauss_kernel_size >= 3:
+                    imgBlur = cv.GaussianBlur(
+                        imgGray, (gauss_kernel_size, gauss_kernel_size), 0)
+                else:
+                    imgBlur = imgGray
+
+                blocksize = cv.getTrackbarPos("2-Blocksize", "Trackbars")
+                c = cv.getTrackbarPos("2-C", "Trackbars")
+                if blocksize % 2 == 0 or blocksize == 0:
+                    blocksize = blocksize+1
+
+                imgThreshold = cv.adaptiveThreshold(
+                    imgBlur, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, blocksize, c)
+                # imgThreshold2 = cv.threshold(imgBlur,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
+
+                median_kernel_size = cv.getTrackbarPos(
+                    "3-Median Kernel", "Trackbars")
+
+                if median_kernel_size % 2 == 0:
+                    median_kernel_size = median_kernel_size+1
+
+                if median_kernel_size >= 3:
+                    imgMedian = cv.medianBlur(imgThreshold, median_kernel_size)
+                else:
+                    imgMedian = imgThreshold
+
+                # imgEro = cv.erode(imgMedian, kernel, iterations=1)
+                # imgDilate = cv.dilate(imgEro, kernel, iterations=1)
+
+                bwThresh = cv.getTrackbarPos("4-BW Threshold", "Trackbars")
+                imgBw = OccupancyDetectorBorders.bwareaopen(
+                    imgMedian, bwThresh)
+
+                cv.imshow("1 - IMG Blur", imgBlur)
+                cv.imshow("2 - IMGTresh", imgThreshold)
+                cv.imshow("3 - IMGMedian", imgMedian)
+                cv.imshow("4 - IMG BW", imgBw)
+                # cv.imshow("IMG Dilate", imgDilate)
+
+                if cv.waitKey(1) == 27:         # wait for ESC key to exit and terminate progra,
+                    cv.destroyAllWindows()
+                    break
+            except:
+                cv.destroyAllWindows()
+
     def is_space_vacant(self, vertex, count, vacant_threshold) -> bool:
         """ Determine if space is vacant depending on the pixel count.
     If count is less than vacant_threshold * area portion, space is vacant.
