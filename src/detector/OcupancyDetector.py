@@ -61,29 +61,29 @@ class OccupancyDetector(ABC):
         cv.waitKey(0)
         cv.destroyAllWindows()
 
-    @staticmethod
-    def drawSpaceSeg(img, vertex, occupied, col_min, row_max, space_area, real_occupied=None, count=None):
-        if real_occupied is not None:
-            if not occupied and not real_occupied:  # True positive
-                cv.polylines(img, [vertex], True, (0, 255, 0), thickness=2)
-            elif occupied and real_occupied:  # True negative
-                cv.polylines(img, [vertex], True, (0, 0, 255), thickness=2)
-            elif occupied and not real_occupied:  # False negative
-                cv.polylines(img, [vertex], True, (58, 146, 255), thickness=2)
-            else:  # False positive
-                cv.polylines(img, [vertex], True, (98, 169, 36), thickness=2)
-        else:
-            if not occupied:
-                cv.polylines(img, [vertex], True, (0, 255, 0), thickness=2)
-            else:
-                cv.polylines(img, [vertex], True, (0, 0, 255), thickness=2)
+    # @staticmethod
+    # def drawSpaceSeg(img, vertex, occupied, col_min, row_max, space_area, real_occupied=None, count=None):
+    #     if real_occupied is not None:
+    #         if not occupied and not real_occupied:  # True positive
+    #             cv.polylines(img, [vertex], True, (0, 255, 0), thickness=2)
+    #         elif occupied and real_occupied:  # True negative
+    #             cv.polylines(img, [vertex], True, (0, 0, 255), thickness=2)
+    #         elif occupied and not real_occupied:  # False negative
+    #             cv.polylines(img, [vertex], True, (58, 146, 255), thickness=2)
+    #         else:  # False positive
+    #             cv.polylines(img, [vertex], True, (98, 169, 36), thickness=2)
+    #     else:
+    #         if not occupied:
+    #             cv.polylines(img, [vertex], True, (0, 255, 0), thickness=2)
+    #         else:
+    #             cv.polylines(img, [vertex], True, (0, 0, 255), thickness=2)
 
-        # Pixel count
-        if(count is not None):
-            text = str(round(count/space_area, 3))
-            cvzone.putTextRect(img, text, (col_min, row_max-3),
-                               scale=0.8, thickness=1, offset=0)
-        return img
+    #     # Pixel count
+    #     if(count is not None):
+    #         text = str(round(count/space_area, 3))
+    #         cvzone.putTextRect(img, text, (col_min, row_max-3),
+    #                            scale=0.8, thickness=1, offset=0)
+    #     return img
 
     @staticmethod
     def get_roi(img, vertex):

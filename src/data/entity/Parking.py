@@ -13,3 +13,6 @@ class Parking:
         self.spaces = spaces
         self.image = image
         self.image_date = image_date
+
+    def __str__(self):
+        return str(self.id) + ' - ' + str(self.image_date)

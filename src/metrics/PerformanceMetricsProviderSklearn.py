@@ -5,6 +5,12 @@ import pandas as pd
 
 from src.metrics.entity.PerformanceMetrics import PerformanceMetrics
 
+# https://www.iartificial.net/precision-recall-f1-accuracy-en-clasificacion/
+# Precision nos da la calidad de la predicción: ¿qué porcentaje de los que hemos dicho que son la clase positiva, en realidad lo son?
+# Recall nos da la cantidad: ¿qué porcentaje de la clase positiva hemos sido capaces de identificar?
+# F1 combina Precision y Recall en una sola medida
+# La Matriz de Confusión indica qué tipos de errores se cometen
+
 
 class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
     def __init__(self,  *args, **kwargs):

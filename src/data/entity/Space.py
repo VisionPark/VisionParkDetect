@@ -17,3 +17,7 @@ class Space:
             self.vertex = np.array([])
         else:
             self.vertex = vertex
+
+        # Debug Detection parameters
+        self.count = None
+        self.area = None

@@ -1,4 +1,5 @@
 from abc import ABC
+from src.data.entity.Space import Space
 from src.detector.entity.DetectionParams import DetectionParams
 from src.detector.OccupancyDetectorBorders import OccupancyDetectorBorders
 from src.detector.OcupancyDetector import OccupancyDetector
@@ -8,6 +9,7 @@ from src.metrics.entity.PerformanceMetrics import PerformanceMetrics
 from src.data.ParkingProvider import ParkingProvider
 from src.data.ParkingProvider import ParkingProviderParams
 import cv2 as cv
+import cvzone
 from sys import path
 path.append("../")
 
@@ -23,7 +25,7 @@ class ParkingOccupancyProcessor(ABC):
 
         self.performance_metrics: PerformanceMetricsProvider = performance_metrics_provider
 
-    def getDetectionImg(self, parking_img: cv.Mat, parking_spaces, real, predicted):
+    def getDetectionImg(self, parking_img: cv.Mat, parking_spaces: list[Space], real, predicted):
         img = parking_img
         for i, space in enumerate(parking_spaces):
 
@@ -39,14 +41,29 @@ class ParkingOccupancyProcessor(ABC):
             else:                                 # False positive
                 cv.polylines(img, [space.vertex], True,
                              (98, 169, 36), thickness=2)
+
+            # Print detection value
+            if(space.count is not None):
+                v = space.vertex.reshape(-1, 1, 2)
+                cols = v[:, :, 0].flatten()
+                rows = v[:, :, 1].flatten()
+
+                row_max = max(rows)
+                col_min = min(cols)
+
+                text = str(
+                    round(space.count/space.area, 2))
+                cvzone.putTextRect(img, text, (col_min, row_max-2),
+                                   scale=0.8, thickness=1, offset=0)
         return img
 
     def process(self) -> PerformanceMetricsProvider:
 
         parking = self.parking_provider.get_parking()
+        detection_params = self.occupancy_detector.params
 
-        self.occupancy_detector.detect_image(
-            parking.image, parking.image_date, parking.spaces)
+        self.occupancy_detector.detect_image(detection_params,
+                                             parking.image, parking.image_date, parking.spaces)
 
         real, predicted = PerformanceMetricsProviderSklearn.get_real_predicted(
             parking.spaces)
@@ -61,7 +78,7 @@ class ParkingOccupancyProcessor(ABC):
             key = cv.waitKey(0)
 
             if(key == 27):
-                self.params.show_imshow = False
+                self.occupancy_detector.params.show_imshow = False
             cv.destroyAllWindows()
 
         return self.performance_metrics

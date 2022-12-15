@@ -1,4 +1,5 @@
 
+from math import floor
 from src.data.ParkingProvider import NoSpacesException, NoImageException
 from datetime import datetime
 from src.data.ParkingProvider import ParkingProvider, ParkingProviderParams
@@ -34,11 +35,11 @@ class ParkingProviderLocal(ParkingProvider):
 
         files = glob.glob(path + '/**/*.jpg', recursive=True)
 
-        self.img_files = random.choices(files, k=int(len(files)/self.k))
+        self.img_files = random.choices(files, k=floor(len(files)/self.k))
         self.spaces_files = [file.replace('.jpg', '.xml')
                              for file in self.img_files]
         self.num_files = len(self.img_files)
-        print(f'Selected {self.num_files} files:\n')
+        print(f'Selected {self.num_files} files')
 
     def get_num_files(self):
         return self.num_files

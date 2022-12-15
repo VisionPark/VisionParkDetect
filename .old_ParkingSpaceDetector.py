@@ -12,6 +12,7 @@ import numpy as np
 import json
 import os  # list directories
 from datetime import datetime
+from collections import namedtuple
 
 # GETTING INFO FROM DATABASE
 # DB CONNECTION
@@ -145,35 +146,6 @@ def on_trackbar(a):
     pass
 
 
-def bwareaopen(imgOriginal, min_size, connectivity=8):
-    """
-    https://stackoverflow.com/questions/2348365/matlab-bwareaopen-equivalent-function-in-opencv
-    Remove small objects from binary image (approximation of
-    bwareaopen in Matlab for 2D images).
-
-    Args:
-        img: a binary image (dtype=uint8) to remove small objects from
-        min_size: minimum size (in pixels) for an object to remain in the image
-        connectivity: Pixel connectivity; either 4 (connected via edges) or 8 (connected via edges and corners).
-
-    Returns:
-        the binary image with small objects removed
-    """
-    img = imgOriginal.copy()
-    # Find all connected components (called here "labels")
-    num_labels, labels, stats, centroids = cv.connectedComponentsWithStats(
-        img, connectivity=connectivity)
-
-    # check size of all connected components (area in pixels)
-    for i in range(num_labels):
-        label_size = stats[i, cv.CC_STAT_AREA]
-
-        # remove connected components smaller than min_size
-        if label_size < min_size:
-            img[labels == i] = 0
-
-    return img
-
 # https://stackoverflow.com/questions/451426/how-do-i-calculate-the-area-of-a-2d-polygon
 
 
@@ -232,6 +204,58 @@ class DetectionParams:
         self.show_imshow = show_imshow
 
 
+class DetectionResult:
+
+    def __init__(self, confusion_matrix: metrics.confusion_matrix, real, predicted):
+        self.confusion_matrix = confusion_matrix
+        self.real = real
+        self.predicted = predicted
+        self.stats = None
+
+    def __init__(self, confusion_matrix: metrics.confusion_matrix, real, predicted, stats: namedtuple):
+        self.confusion_matrix = confusion_matrix
+        self.real = real
+        self.predicted = predicted
+
+    def get_stats(self) -> namedtuple:
+        tn, fp, fn, tp = metrics.confusion_matrix(
+            self.real, self.predicted).ravel()
+
+        # Precision Score = TP / (FP + TP). Minimize FP
+        precision = tp / (fp+tp)
+
+        # Specificity score = TN / (TN+FP)
+        specificity = tn / (tn+fp)
+
+        # Recall Score = TP / (FN + TP). Minimize FN
+        recall = tp / (fn+tp)
+
+        # F1 Score = 2* Precision Score * Recall Score/ (Precision Score + Recall Score/) . Minimize FN over minimizing FP
+        f1 = 2*precision*recall / (precision + recall)
+
+        # Accuracy Score = (TP + TN)/ (TP + FN + TN + FP)
+        accuracy = (tp+tn) / (tp+fn+tn+fp)
+
+        self.stats = namedtuple(
+            precision=precision, specificity=specificity, recall=recall, f1=f1, accuracy=accuracy)
+        return self.stats
+
+    def show_confusion_matrix(self):
+        if self.stats is None:
+            self.get_stats()
+
+        print('Precision: %.3f' % self.stats.precision)
+        print('specificity: %.3f' % self.stats.specificity)
+        print('Recall: %.3f' % self.stats.recall)
+        print('F1 Score: %.3f' % self.stats.f1)
+        print('Accuracy: %.3f' % self.stats.accuracy)
+
+        cm_display = metrics.ConfusionMatrixDisplay(
+            confusion_matrix=self.confusion_matrix, display_labels=['Occupied', 'Vacant'])
+        cm_display.plot()
+        plt.show()
+
+
 def preProcess(img: cv.Mat, params: DetectionParams) -> cv.Mat:
     # imgGray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
@@ -251,7 +275,7 @@ def preProcess(img: cv.Mat, params: DetectionParams) -> cv.Mat:
     elif(params.channel == "v"):
         imgGray = v
 
-    if(params.gb_k == None):
+    if(params.gb_k is None):
         imgBlur = imgGray
     else:
         imgBlur = cv.GaussianBlur(imgGray, params.gb_k, params.gb_s)
@@ -268,6 +292,8 @@ def preProcess(img: cv.Mat, params: DetectionParams) -> cv.Mat:
             cv.imshow("1 - IMGBlur", imgBlur)
             cv.imshow("2 - IMGTresh", imgThreshold)
             cv.imshow("3 - IMGMedian", imgMedian)
+    else:
+        imgMedian = imgThreshold
 
     # Make thicker edges
     # kernel = np.ones((5,5), np.uint8)
@@ -276,9 +302,11 @@ def preProcess(img: cv.Mat, params: DetectionParams) -> cv.Mat:
 
     # Remove small objects
     if(params.bw_size != -1):
-        imgBw = bwareaopen(imgMedian, 85)
+        imgBw = bwareaopen(imgMedian, params.bw_size)
         if(params.show_imshow):
             cv.imshow("4 - imgBw", imgBw)
+    else:
+        imgBw = imgMedian
     # cv.imshow("IMG Dilate", imgDilate)
 
     return imgBw
@@ -416,7 +444,7 @@ def detect_batch(files, params: DetectionParams, showConfusionMatrix=True):
                 cv.imshow("roi", roi)
                 cv.imshow("IMG with space seg", img)
 
-                key = cv.waitKey()
+                key = cv.waitKey(0)
                 if(key == 27):
                     break
 
@@ -478,6 +506,9 @@ def detect_image(filename, params: DetectionParams):
         predicted.append(vacant)
         real.append(vacant_real)
 
+    if(params.show_imshow):
+        cv.waitKey(0)
+
     confusion_matrix = metrics.confusion_matrix(real, predicted)
     return confusion_matrix, real, predicted
 
@@ -518,34 +549,3 @@ def process_batch(files, params: DetectionParams):
                 list(filter(check_matrix, confusion_matrices)))
             confusion_matrix = np.sum(confusion_matrices, axis=0)
             return confusion_matrix, real, predicted
-
-
-def show_confusion_matrix(confusion_matrix, real, predicted):
-    tn, fp, fn, tp = metrics.confusion_matrix(real, predicted).ravel()
-
-    # Precision Score = TP / (FP + TP). Minimize FP
-    precision = tp / (fp+tp)
-    print('Precision: %.3f' % precision)
-
-    # Specificity score = TN / (TN+FP)
-    specificity = tn / (tn+fp)
-    print('specificity: %.3f' % specificity)
-
-    # Recall Score = TP / (FN + TP). Minimize FN
-    recall = tp / (fn+tp)
-    print('Recall: %.3f' % recall)
-
-    # F1 Score = 2* Precision Score * Recall Score/ (Precision Score + Recall Score/) . Minimize FN over minimizing FP
-    f1 = 2*precision*recall / (precision + recall)
-    print('F1 Score: %.3f' % f1)
-
-    # Accuracy Score = (TP + TN)/ (TP + FN + TN + FP)
-    accuracy = (tp+tn) / (tp+fn+tn+fp)
-    print('Accuracy: %.3f' % accuracy)
-
-    cm_display = metrics.ConfusionMatrixDisplay(
-        confusion_matrix=confusion_matrix, display_labels=['Occupied', 'Vacant'])
-    cm_display.plot()
-    plt.show()
-
-    return precision, specificity, recall, f1, accuracy
