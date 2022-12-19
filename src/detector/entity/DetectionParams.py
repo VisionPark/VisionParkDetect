@@ -22,7 +22,7 @@ class DetectionParams:
         self.gb_k = gb_k  # GaussianBlur kernel
         self.gb_s = gb_s  # GaussianBlur sigma (std. deviation)
         self.at_method = at_method  # adaptiveThreshold method
-        # adaptiveThreshold blockSizeneighborhood that is used to calculate a threshold value for the pixel
+        # adaptiveThreshold blockSize neighborhood that is used to calculate a threshold value for the pixel
         self.at_blockSize = at_blockSize
         self.at_C = at_C  # adaptiveThreshold C constant to be substracted
         # Median filter kernel size (-1 if not desired to apply)

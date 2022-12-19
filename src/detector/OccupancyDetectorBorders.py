@@ -7,6 +7,7 @@ import cv2 as cv
 from datetime import datetime
 import numpy as np
 import threading
+import math
 
 
 class OccupancyDetectorBorders(OccupancyDetector):
@@ -19,13 +20,15 @@ class OccupancyDetectorBorders(OccupancyDetector):
 
         imgPre = OccupancyDetectorBorders.preProcess(
             params, parking_img)
+        # imgPre = OccupancyDetectorBorders.canny_edge_detection(
+        #     parking_img, params, params.show_imshow)
 
         new_spaces = []
         for space in spaces.copy():
             vertex = space.vertex
             if(vertex.size == 0):
                 continue
-            vertex = vertex.reshape(-1, 1, 2)
+            vertex = vertex.reshape(4, 1, 2)
 
             # Get ROI of parking space
             roi = OccupancyDetector.get_roi(imgPre, vertex)
@@ -40,6 +43,67 @@ class OccupancyDetectorBorders(OccupancyDetector):
             new_spaces.append(space)
 
         return new_spaces
+
+    @staticmethod
+    def canny_edge_detection(img, params, show_imshow=False):
+        # Convert the image to grayscale
+        imgGray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
+        if(params.gb_k is None):
+            imgBlur = imgGray
+        else:
+            imgBlur = cv.GaussianBlur(
+                imgGray, params.gb_k, params.gb_s)
+
+        if(params.bf_d is None):
+            imgBlur = imgGray
+        else:
+            imgBlur = cv.bilateralFilter(
+                imgBlur, params.bf_d, params.bf_sigma_color, params.bf_sigma_space)
+
+        # Apply Canny edge detection
+        if(params.dynamic_t is None):
+            t1 = params.t1
+            t2 = params.t2
+        else:
+            v = np.median(imgGray)
+            sigma = 0.33
+
+            # ---- apply optimal Canny edge detection using the computed median----
+            t1 = int(max(0, (1.0 - sigma) * v))
+            t2 = int(min(255, (1.0 + sigma) * v))
+            print(t1, t2)
+
+        imgEdges = cv.Canny(imgBlur, params.t1, params.t2)
+
+        # Remove small objects
+        if(params.bw_size != -1):
+            imgBw = OccupancyDetectorBorders.bwareaopen(
+                imgEdges, params.bw_size)
+        else:
+            imgBw = imgEdges
+        # cv.imshow("IMG Dilate", imgDilate)
+
+        if(show_imshow):
+            cv.imshow('1 - Img gray', imgGray)
+            cv.imshow('2 - Biltareal filter', imgBlur)
+            cv.imshow('3 - Canny Edge Detection', imgEdges)
+            cv.imshow("4 - imgBw", imgBw)
+
+            # # Use Hough transform to detect lines in the edge map
+            # lines = cv.HoughLinesP(
+            #     imgEdges, 1, np.pi/180, 100, minLineLength=100, maxLineGap=10)
+
+            # # Iterate over the detected lines and draw them on the image
+            # if lines is not None:
+            #     for line in lines:
+            #         x1, y1, x2, y2 = line[0]
+            #         cv.line(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+            # # Show the resulting image
+            # cv.imshow("Image with detected lines", img)
+
+        return imgBw
 
     def setup_params_img(parking_img: cv.Mat, spaces: list[Space], initial_params: DetectionParams = None) -> DetectionParams:
 
@@ -188,6 +252,10 @@ class OccupancyDetectorBorders(OccupancyDetector):
             imgBlur = cv.GaussianBlur(
                 imgGray, params.gb_k, params.gb_s)
 
+        # if(params.bf_d is not None):
+        #     imgBlur = cv.bilateralFilter(
+        #         imgBlur, params.bf_d, params.bf_sigma_color, params.bf_sigma_space)
+
         imgThreshold = cv.adaptiveThreshold(
             imgBlur, 255, params.at_method, cv.THRESH_BINARY_INV, params.at_blockSize, params.at_C)
         # a,imgThreshold2 = cv.threshold(imgBlur,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
@@ -196,10 +264,6 @@ class OccupancyDetectorBorders(OccupancyDetector):
         # Remove salt and pepper noise
         if(params.median_k != -1):
             imgMedian = cv.medianBlur(imgThreshold, params.median_k)
-            if(params.show_imshow):
-                cv.imshow("1 - IMGBlur", imgBlur)
-                cv.imshow("2 - IMGTresh", imgThreshold)
-                cv.imshow("3 - IMGMedian", imgMedian)
         else:
             imgMedian = imgThreshold
 
@@ -212,11 +276,16 @@ class OccupancyDetectorBorders(OccupancyDetector):
         if(params.bw_size != -1):
             imgBw = OccupancyDetectorBorders.bwareaopen(
                 imgMedian, params.bw_size)
-            if(params.show_imshow):
-                cv.imshow("4 - imgBw", imgBw)
         else:
             imgBw = imgMedian
         # cv.imshow("IMG Dilate", imgDilate)
+
+        # Show images
+        if(params.show_imshow):
+            cv.imshow("1 - IMGBlur", imgBlur)
+            cv.imshow("2 - IMGTresh", imgThreshold)
+            cv.imshow("3 - IMGMedian", imgMedian)
+            cv.imshow("4 - imgBw", imgBw)
 
         return imgBw
 
