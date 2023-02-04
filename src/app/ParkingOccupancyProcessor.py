@@ -1,5 +1,6 @@
 from abc import ABC
 from src.data.entity.Space import Space
+from src.detector.OccupancyDetectorDiff import OccupancyDetectorDiff
 from src.detector.entity.DetectionParams import DetectionParams
 from src.detector.OccupancyDetectorBorders import OccupancyDetectorBorders
 from src.detector.OcupancyDetector import OccupancyDetector
@@ -20,7 +21,7 @@ class ParkingOccupancyProcessor(ABC):
         # Overriden by child implementation
         self.parking_provider = None
 
-        self.occupancy_detector: OccupancyDetector = OccupancyDetectorBorders(
+        self.occupancy_detector: OccupancyDetector = OccupancyDetectorDiff(
             detection_params)
 
         self.performance_metrics: PerformanceMetricsProvider = performance_metrics_provider

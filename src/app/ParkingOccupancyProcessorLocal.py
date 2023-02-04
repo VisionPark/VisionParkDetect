@@ -5,6 +5,7 @@ from src.data.ParkingProviderLocal import ParkingProviderLocal, ParkingProviderL
 from src.app.ParkingOccupancyProcessor import ParkingOccupancyProcessor
 from src.data.entity.Parking import Parking
 from src.detector.OccupancyDetectorBorders import OccupancyDetectorBorders
+from src.detector.OccupancyDetectorDiff import OccupancyDetectorDiff
 from src.detector.entity.DetectionParams import DetectionParams
 from sys import path
 import multiprocessing
@@ -59,8 +60,8 @@ def detect_wrapper(parking: Parking, params: DetectionParams):
 
     print(str(parking.image_date))
 
-    spaces = OccupancyDetectorBorders.detect_image(params,
-                                                   parking.image, parking.image_date, parking.spaces)
+    spaces = OccupancyDetectorDiff.detect_image(params,
+                                                parking.image, parking.image_date, parking.spaces)
 
     real, predicted = PerformanceMetricsProviderSklearn.get_real_predicted(
         spaces)
