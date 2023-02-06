@@ -1,1 +1,3 @@
 *.pyc
+dataset/test/*
+dataset/training/*
