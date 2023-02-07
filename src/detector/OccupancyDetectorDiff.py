@@ -50,7 +50,7 @@ class OccupancyDetectorDiff(OccupancyDetector):
     @staticmethod
     def get_empty_img(parking_id, weather='Cloudy') -> cv.Mat:
         return cv.imread(
-            f"E:/OneDrive - UNIVERSIDAD DE HUELVA/TFG/VisionParkDetect/dataset/{parking_id}_{weather}_empty.jpg", cv.IMREAD_GRAYSCALE)
+            f"E:/OneDrive - UNIVERSIDAD DE HUELVA/TFG/VisionParkDetect/dataset/empty/{parking_id}/{weather}/{parking_id}_{weather}_empty.jpg", cv.IMREAD_GRAYSCALE)
 
     @staticmethod
     def preProcess(params, img):

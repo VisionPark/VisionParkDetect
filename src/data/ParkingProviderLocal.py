@@ -15,11 +15,9 @@ path.append("../")
 
 
 class ParkingProviderLocalParams(ParkingProviderParams):
-    def __init__(self, parking_id, path, k, random_seed=None):
+    def __init__(self, parking_id, path):
         super().__init__(parking_id)
         self.path = path
-        self.k = k
-        self.random_seed = random_seed
 
 
 class ParkingProviderLocal(ParkingProvider):
@@ -27,15 +25,8 @@ class ParkingProviderLocal(ParkingProvider):
     def __init__(self, params: ParkingProviderLocalParams):
         super().__init__(params)
         path = params.path  # Path to folder with images and spaces files
-        self.k = params.k   # 1/k random files to select
         self.index = 0
-
-        if params.random_seed is not None:
-            random.seed(params.random_seed)
-
-        files = glob.glob(path + '/**/*.jpg', recursive=True)
-
-        self.img_files = random.choices(files, k=floor(len(files)/self.k))
+        self.img_files = glob.glob(path + '/**/*.jpg', recursive=True)
         self.spaces_files = [file.replace('.jpg', '.xml')
                              for file in self.img_files]
         self.num_files = len(self.img_files)

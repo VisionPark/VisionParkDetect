@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 from sklearn import metrics
 from src.metrics.PerformanceMetricsProvider import PerformanceMetricsProvider
 import pandas as pd
@@ -89,12 +90,14 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
         print(df.round(3))
 
     @staticmethod
-    def show_tpr_fpr(metrics_dict_vt: dict, show_diff=False):
+    def show_tpr_fpr(metrics_dict_vt: dict, parking_id, weather, show_diff=False, save_fig_dst=None):
 
         fontP = FontProperties()
         fontP.set_size('xx-small')
 
-        plt.figure(figsize=(5, 5), dpi=300)
+        fig, ax = plt.subplots(2, 1, figsize=(5, 5), dpi=300, sharey=True)
+
+        # plt.figure()
         index = 0
         for vt, metrics_dict_diff in metrics_dict_vt.items():
             tpr_list = list()
@@ -107,46 +110,58 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
                 recall_list.append(metrics.recall)
                 diff_list.append(diff)
 
-        # auc_1 = auc(fpr, tpr)
-
-            plt.subplot(2, 1, 1)
+            # auc_1 = round(auc(fpr_list, tpr_list), 2)
+            auc_2 = round(auc(recall_list, tpr_list), 2)
+            # fig.sub
+            # ax.subplot(2, 1, 1)
             li = zip(*[fpr_list, tpr_list])
-            plt.plot(*zip(*li), linestyle='--', marker='o',
-                     label=f'{index}: vt={vt}')
+            ax[0].plot(*zip(*li), linestyle='--', marker='o',
+                       label=f'{index}: vt={vt}')
 
-            plt.subplot(2, 1, 2)
+            # plt.subplot(2, 1, 2)
             li_recall = zip(*[recall_list, tpr_list])
-            plt.plot(*zip(*li_recall), linestyle='--', marker='o',
-                     label=f'{index}: vt={vt}')
+            ax[1].plot(*zip(*li_recall), linestyle='--', marker='o',
+                       label=f'{index}: vt={vt} auc={auc_2}')
 
             index += 1
 
+        # Graph 2: FPR-TPR
         plt.subplot(2, 1, 1)
-        plt.xlabel('False positive rate')
-        plt.ylabel('True positive rate')
-        plt.xticks(arange(0, 1.05, 0.1))
-        plt.yticks(arange(0.5, 1.05, 0.05))
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', prop=fontP)
-        plt.plot(xy=(0, 1), linestyle='--', marker='o',
-                 label='Perfect classifier')
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', prop=fontP)
+        fig.suptitle(f'{parking_id}-{weather}')
+        ax[0].set_xlabel('False positive rate (1 - Especificidad)', fontsize=8)
+        ax[0].set_ylabel('True positive rate (Precision)', fontsize=8)
+        plt.xticks(arange(0, 1.05, 0.05), fontsize=6)
+        plt.yticks(arange(0.5, 1.05, 0.05), fontsize=6)
 
-        for i, txt in enumerate(diff_list):
-            plt.annotate(txt, (fpr_list[i], tpr_list[i]))
+        ax[0].plot(0, 1, marker='x',
+                   label='Perfect classifier')
+        plt.legend(bbox_to_anchor=(1, 1), loc='upper left', prop=fontP)
 
+        if show_diff:
+            texts = [plt.text(fpr_list[i], tpr_list[i], diff_list[i], size=8)
+                     for i in range(len(fpr_list))]
+            adjust_text(texts, arrowprops={
+                        'arrowstyle': 'fancy'}, expand_points=(1.3, 1.3))
+
+        # Graph 2: Recall-TPR
         plt.subplot(2, 1, 2)
-        plt.xlabel('Recall')
-        plt.ylabel('True positive rate')
+        ax[1].set_xlabel('Recall (Sensibilidad)', fontsize=8)
+        ax[1].set_ylabel('True positive rate (Precision)', fontsize=8)
 
-        plt.xticks(arange(0, 1.05, 0.05))
-        plt.yticks(arange(0.5, 1.05, 0.05))
+        plt.xticks(arange(0.3, 1.05, 0.05), fontsize=6)
+        plt.yticks(arange(0.5, 1.05, 0.05), fontsize=6)
+        ax[1].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        # We change the fontsize of minor ticks label
 
-        plt.plot(xy=(1, 1), linestyle='--', marker='o',
+        plt.plot(1, 1, marker='x',
                  label='Perfect classifier')
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', prop=fontP)
+        ax[1].legend(bbox_to_anchor=(1, 1), loc='upper left', prop=fontP)
 
-        for i, txt in enumerate(diff_list):
-            plt.annotate(txt, (recall_list[i], tpr_list[i]))
+        if show_diff:
+            texts = [plt.text(recall_list[i], tpr_list[i], diff_list[i], size=8)
+                     for i in range(len(fpr_list))]
+            adjust_text(texts, arrowprops={
+                        'arrowstyle': 'fancy'}, expand_points=(1.3, 1.3))
 
         plt.subplots_adjust(left=0.1,
                             bottom=0.1,
@@ -154,30 +169,8 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
                             top=0.9,
                             wspace=0.1,
                             hspace=0.4)
-        plt.show()
 
-    @staticmethod
-    def show_precision_recall(metrics_list: list[PerformanceMetrics], row_names: list[str]):
-        precision_list = [m.precision for m in metrics_list]
-        recall_list = [m.recall for m in metrics_list]
+        if save_fig_dst is not None:
+            plt.savefig(save_fig_dst, facecolor='white', bbox_inches='tight')
 
-        plt.figure(figsize=(5, 5), dpi=300)
-        for f, p in zip(recall_list, precision_list):
-            plt.plot(f, p, 'x')
-
-        # plt.scatter(fpr, tpr)
-
-        texts = [plt.text(recall_list[i], precision_list[i], str(i), size=8)
-                 for i in range(len(precision_list))]
-        adjust_text(texts, arrowprops={
-                    'arrowstyle': 'fancy'}, expand_points=(1.3, 1.3))
-
-        plt.xlabel('Recall')
-        plt.ylabel('Precision')
-
-        fontP = FontProperties()
-        fontP.set_size('xx-small')
-
-        plt.legend([str(i)+": " + row[row.find(" "):] for i, row in enumerate(
-            row_names)], bbox_to_anchor=(1.1, 1.05), loc='upper left', prop=fontP)
         plt.show()
