@@ -8,6 +8,7 @@ from datetime import datetime
 import numpy as np
 import threading
 import math
+from skimage.exposure import match_histograms
 
 
 class OccupancyDetectorDiff(OccupancyDetector):
@@ -22,9 +23,12 @@ class OccupancyDetectorDiff(OccupancyDetector):
         #     params, parking_img)
         # imgPre = OccupancyDetectorDiff.canny_edge_detection(
         #     parking_img, params, params.show_imshow)
-
-        imgPre = OccupancyDetectorDiff.preProcess(
-            params, parking_img)
+        if params.match_histograms is not None and params.match_histograms:
+            imgPre = OccupancyDetectorDiff.preProcess_match_histograms(
+                params, parking_img)
+        else:
+            imgPre = OccupancyDetectorDiff.preProcess(
+                params, parking_img)
 
         new_spaces = []
         for space in spaces.copy():
@@ -50,12 +54,12 @@ class OccupancyDetectorDiff(OccupancyDetector):
     @staticmethod
     def get_empty_img(parking_id, weather='Cloudy') -> cv.Mat:
         return cv.imread(
-            f"E:/OneDrive - UNIVERSIDAD DE HUELVA/TFG/VisionParkDetect/dataset/empty/{parking_id}/{weather}/{parking_id}_{weather}_empty.jpg", cv.IMREAD_GRAYSCALE)
+            f"E:/OneDrive - UNIVERSIDAD DE HUELVA/TFG/VisionParkDetect/dataset/empty/{parking_id}/{weather}/{parking_id}_{weather}_empty.jpg")
 
     @staticmethod
     def preProcess(params, img):
-        img_empty = OccupancyDetectorDiff.get_empty_img(
-            params.parking_id, params.weather if params.weather is not None else 'Cloudy')
+        img_empty = cv.cvtColor(OccupancyDetectorDiff.get_empty_img(
+            params.parking_id, params.weather), cv.COLOR_BGR2GRAY)
 
         img_empty_blur = cv.GaussianBlur(img_empty, params.gb_k, params.gb_s)
 
@@ -68,7 +72,7 @@ class OccupancyDetectorDiff(OccupancyDetector):
             diff, params.diff_threshold, 255, cv.THRESH_BINARY)[1]
 
         # Remove salt and pepper noise
-        if(params.median_k != -1):
+        if params.median_k != -1:
             imgMedian = cv.medianBlur(imgThreshold, params.median_k)
         else:
             imgMedian = imgThreshold
@@ -79,14 +83,14 @@ class OccupancyDetectorDiff(OccupancyDetector):
         # imgDilate = cv.dilate(imgEro, kernel, iterations=1)
 
         # Remove small objects
-        if(params.bw_size != -1):
+        if params.bw_size != -1:
             imgBw = OccupancyDetectorDiff.bwareaopen(
                 imgMedian, params.bw_size)
         else:
             imgBw = imgMedian
         # cv.imshow("IMG Dilate", imgDilate)
 
-        if(params.show_imshow):
+        if params.show_imshow:
             cv.imshow("1 - IMGBlur", img_blur)
             cv.imshow("2 - IMGEmptyBlur", img_empty_blur)
             cv.imshow("3 - diff_threshold", imgThreshold)
@@ -94,6 +98,32 @@ class OccupancyDetectorDiff(OccupancyDetector):
             cv.imshow("5 - imgBw", imgBw)
 
         return imgBw
+
+    @staticmethod
+    def preProcess_match_histograms(params, img):
+        img_empty = OccupancyDetectorDiff.get_empty_img(
+            params.parking_id, params.weather if params.weather is not None else 'Cloudy')
+
+        img_matched = match_histograms(img, img_empty,
+                                       multichannel=True)
+
+        img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        img_empty_gray = cv.cvtColor(img_empty, cv.COLOR_BGR2GRAY)
+        img_matched_gray = cv.cvtColor(img_matched, cv.COLOR_BGR2GRAY)
+
+        diff = cv.absdiff(img_matched_gray, img_empty_gray)
+
+        imgThreshold = cv.threshold(
+            diff, params.diff_threshold, 255, cv.THRESH_BINARY)[1]
+
+        if params.show_imshow:
+            cv.imshow("1 - IMG", img)
+            cv.imshow("1 - IMGEmpty", img_empty)
+            cv.imshow("1 - img_empty_gray", img_empty_gray)
+            cv.imshow('2 - Img matched', img_matched_gray)
+            cv.imshow("3 - diff_threshold", imgThreshold)
+
+        return imgThreshold
 
     def setup_params_img(parking_img: cv.Mat, parking_id, weather, spaces: list[Space], initial_params: DetectionParams = None) -> DetectionParams:
 

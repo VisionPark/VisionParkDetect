@@ -30,7 +30,7 @@ class ParkingProviderLocal(ParkingProvider):
         self.spaces_files = [file.replace('.jpg', '.xml')
                              for file in self.img_files]
         self.num_files = len(self.img_files)
-        print(f'Selected {self.num_files} files')
+        # print(f'Selected {self.num_files} files')
 
     def get_num_files(self):
         return self.num_files

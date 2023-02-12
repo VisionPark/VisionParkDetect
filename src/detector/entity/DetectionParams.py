@@ -19,7 +19,7 @@ class DetectionParams:
         - diff_threshold :      Intensity difference treshold for creating binary image
     """
 
-    def __init__(self, gb_k, gb_s, at_method=None, at_blockSize=None, at_C=None, median_k=-1, bw_size=-1, bw_conn=8, channel="v", vacant_threshold=0.3, show_imshow=False, diff_threshold=None):
+    def __init__(self, gb_k=(3, 3), gb_s=0, at_method=None, at_blockSize=None, at_C=None, median_k=3, bw_size=50, bw_conn=8, channel="v", vacant_threshold=0.3, show_imshow=False, diff_threshold=50, match_histograms=True):
         self.gb_k = gb_k  # GaussianBlur kernel
         self.gb_s = gb_s  # GaussianBlur sigma (std. deviation)
         self.at_method = at_method  # adaptiveThreshold method
@@ -40,6 +40,8 @@ class DetectionParams:
         self.show_imshow = show_imshow
         # Intensity difference treshold for creating binary image
         self.diff_threshold = diff_threshold
+
+        self.match_histograms = match_histograms
 
     def __str__(self):
         str1 = f'DetectionParams\ngb_k: {self.gb_k}\ngb_s: {self.gb_s}\nat_method: {self.at_method}\nat_blockSize: {self.at_blockSize}\nat_C: {self.at_C}\nmedian_k: {self.median_k}\nbw_size: {self.bw_size}\nbw_conn: {self.bw_conn}\nchannel: {self.channel}\nvacant_threshold: {self.vacant_threshold}\nshow_imshow: {self.show_imshow}\ndiff_threshold={self.diff_threshold}'

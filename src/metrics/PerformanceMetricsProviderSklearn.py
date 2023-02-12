@@ -13,7 +13,7 @@ from numpy import arange
 
 # https://www.iartificial.net/precision-recall-f1-accuracy-en-clasificacion/
 # Precision nos da la calidad de la predicción: ¿qué porcentaje de los que hemos dicho que son la clase positiva, en realidad lo son?
-# Recall nos da la cantidad: ¿qué porcentaje de la clase positiva hemos sido capaces de identificar?
+# Sensibilidad o Recall nos da la cantidad: ¿qué porcentaje de la clase positiva hemos sido capaces de identificar?
 # F1 combina Precision y Recall en una sola medida
 # La Matriz de Confusión indica qué tipos de errores se cometen
 
@@ -33,7 +33,8 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
         # False positive rate = 1 - Specificity
         specificity = tn / (tn+fp)
 
-        # Recall Score = TP / (FN + TP). Minimize FN
+        # True positive rate
+        # Sensibilidad o Recall Score = TP / (FN + TP). Minimize FN
         recall = tp / (fn+tp)
 
         # F1 Score = 2* Precision Score * Recall Score/ (Precision Score + Recall Score/) . Minimize FN over minimizing FP
@@ -102,16 +103,16 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
         for vt, metrics_dict_diff in metrics_dict_vt.items():
             tpr_list = list()
             fpr_list = list()
-            recall_list = list()
+            precision_list = list()
             diff_list = list()
             for diff, metrics in metrics_dict_diff.items():
-                tpr_list.append(metrics.precision)
+                tpr_list.append(metrics.recall)
                 fpr_list.append(1 - metrics.specificity)
-                recall_list.append(metrics.recall)
+                precision_list.append(metrics.precision)
                 diff_list.append(diff)
 
             # auc_1 = round(auc(fpr_list, tpr_list), 2)
-            auc_2 = round(auc(recall_list, tpr_list), 2)
+            # auc_2 = round(auc(precision_list, tpr_list), 2)
             # fig.sub
             # ax.subplot(2, 1, 1)
             li = zip(*[fpr_list, tpr_list])
@@ -119,9 +120,9 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
                        label=f'{index}: vt={vt}')
 
             # plt.subplot(2, 1, 2)
-            li_recall = zip(*[recall_list, tpr_list])
+            li_recall = zip(*[tpr_list, precision_list])
             ax[1].plot(*zip(*li_recall), linestyle='--', marker='o',
-                       label=f'{index}: vt={vt} auc={auc_2}')
+                       label=f'{index}: vt={vt} auc=')
 
             index += 1
 
@@ -129,9 +130,11 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
         plt.subplot(2, 1, 1)
         fig.suptitle(f'{parking_id}-{weather}')
         ax[0].set_xlabel('False positive rate (1 - Especificidad)', fontsize=8)
-        ax[0].set_ylabel('True positive rate (Precision)', fontsize=8)
-        plt.xticks(arange(0, 1.05, 0.05), fontsize=6)
-        plt.yticks(arange(0.5, 1.05, 0.05), fontsize=6)
+        ax[0].set_ylabel('True positive rate (Recall)', fontsize=8)
+        # plt.xticks(arange(0, 1.05, 0.05), fontsize=6)
+        # plt.yticks(arange(min(0.5, min(tpr_list)), 1.05, 0.05), fontsize=6)
+        ax[0].locator_params(axis='both', tight=True, nbins=15)
+        ax[0].tick_params(axis='both', labelsize=6)
 
         ax[0].plot(0, 1, marker='x',
                    label='Perfect classifier')
@@ -145,11 +148,18 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
 
         # Graph 2: Recall-TPR
         plt.subplot(2, 1, 2)
-        ax[1].set_xlabel('Recall (Sensibilidad)', fontsize=8)
-        ax[1].set_ylabel('True positive rate (Precision)', fontsize=8)
+        ax[1].set_xlabel('True positive rate (Recall)', fontsize=8)
+        ax[1].set_ylabel('Precision', fontsize=8)
+        ax[1].locator_params(axis='both', tight=True, nbins=15)
+        ax[1].tick_params(axis='both', labelsize=6)
+        # plt.xticks(arange(min(0.5, min(tpr_list)), 1.05, 0.05), fontsize=6)
+        # plt.yticks(arange(min(0.5, min(precision_list)), 1.05, 0.05), fontsize=6)
 
-        plt.xticks(arange(0.3, 1.05, 0.05), fontsize=6)
-        plt.yticks(arange(0.5, 1.05, 0.05), fontsize=6)
+        # if len(ax[1].get_xticks()) < 5:
+        #     step = (1-min(tpr_list))/10
+        #     ax[1].set_xticks(
+        #         arange(min(tpr_list), 1+step, step))
+
         ax[1].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         # We change the fontsize of minor ticks label
 
@@ -158,7 +168,7 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
         ax[1].legend(bbox_to_anchor=(1, 1), loc='upper left', prop=fontP)
 
         if show_diff:
-            texts = [plt.text(recall_list[i], tpr_list[i], diff_list[i], size=8)
+            texts = [plt.text(tpr_list[i], precision_list[i], diff_list[i], size=8)
                      for i in range(len(fpr_list))]
             adjust_text(texts, arrowprops={
                         'arrowstyle': 'fancy'}, expand_points=(1.3, 1.3))

@@ -18,13 +18,10 @@ class OccupancyDetectorBorders(OccupancyDetector):
     @staticmethod
     def detect_image(params: DetectionParams, parking_img: cv.Mat, parking_img_date: datetime, spaces: list[Space]):
 
-        # imgPre = OccupancyDetectorBorders.preProcess(
-        #     params, parking_img)
+        imgPre = OccupancyDetectorBorders.preProcess(
+            params, parking_img)
         # imgPre = OccupancyDetectorBorders.canny_edge_detection(
         #     parking_img, params, params.show_imshow)
-
-        imgPre = OccupancyDetectorBorders.imdiff_preProcess(
-            params, parking_img)
 
         new_spaces = []
         for space in spaces.copy():
@@ -46,49 +43,6 @@ class OccupancyDetectorBorders(OccupancyDetector):
             new_spaces.append(space)
 
         return new_spaces
-
-    @staticmethod
-    def imdiff_preProcess(params, img, show_imshow=False):
-        img_empty = cv.imread(
-            "E:/OneDrive - UNIVERSIDAD DE HUELVA/TFG/VisionParkDetect/dataset/UFPR04_empty.jpg", cv.IMREAD_GRAYSCALE)
-
-        img_empty_blur = cv.GaussianBlur(img_empty, params.gb_k, params.gb_s)
-
-        imgGray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        img_blur = cv.GaussianBlur(
-            imgGray, params.gb_k, params.gb_s)
-
-        diff = cv.absdiff(img_blur, img_empty_blur)
-        imgThreshold = cv.threshold(
-            diff, params.diff_threshold, 255, cv.THRESH_BINARY)[1]
-
-        # Remove salt and pepper noise
-        if(params.median_k != -1):
-            imgMedian = cv.medianBlur(imgThreshold, params.median_k)
-        else:
-            imgMedian = imgThreshold
-
-        # Make thicker edges
-        # kernel = np.ones((5,5), np.uint8)
-        # imgEro = cv.erode(imgMedian, kernel, iterations=1)
-        # imgDilate = cv.dilate(imgEro, kernel, iterations=1)
-
-        # Remove small objects
-        if(params.bw_size != -1):
-            imgBw = OccupancyDetectorBorders.bwareaopen(
-                imgMedian, params.bw_size)
-        else:
-            imgBw = imgMedian
-        # cv.imshow("IMG Dilate", imgDilate)
-
-        if(params.show_imshow):
-            cv.imshow("1 - IMGBlur", img_blur)
-            cv.imshow("2 - IMGEmptyBlur", img_empty_blur)
-            cv.imshow("3 - diff_threshold", imgThreshold)
-            cv.imshow("4 - IMGMedian", imgMedian)
-            cv.imshow("5 - imgBw", imgBw)
-
-        return imgBw
 
     @staticmethod
     def canny_edge_detection(img, params, show_imshow=False):
