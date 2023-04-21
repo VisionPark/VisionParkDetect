@@ -19,7 +19,7 @@ class DetectionParams:
         - diff_threshold :      Intensity difference treshold for creating binary image
     """
 
-    def __init__(self, gb_k=(3, 3), gb_s=0, at_method=None, at_blockSize=None, at_C=None, median_k=3, bw_size=50, bw_conn=8, channel="v", vacant_threshold=0.3, show_imshow=False, diff_threshold=50, match_histograms=True):
+    def __init__(self, gb_k=(3, 3), gb_s=0, at_method=None, at_blockSize=33, at_C=9, median_k=-1, bw_size=50, bw_conn=8, channel="v", vacant_threshold=0.3, show_imshow=False, diff_threshold=50, match_histograms=True):
         self.gb_k = gb_k  # GaussianBlur kernel
         self.gb_s = gb_s  # GaussianBlur sigma (std. deviation)
         self.at_method = at_method  # adaptiveThreshold method

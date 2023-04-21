@@ -46,7 +46,7 @@ class ParkingOccupancyProcessorLocal(ParkingOccupancyProcessor):
             parkings.append(self.parking_provider.get_parking())
 
         with multiprocessing.Pool(num_workers) as pool:
-            args = [(p, detection_params) for p in parkings]
+            args = [(self, p, detection_params) for p in parkings]
             results = list(
                 tqdm(pool.imap(detect_wrapper_star, args), total=len(args)))
 
@@ -56,12 +56,12 @@ class ParkingOccupancyProcessorLocal(ParkingOccupancyProcessor):
         return self.performance_metrics
 
 
-def detect_wrapper(parking: Parking, params: DetectionParams):
+def detect_wrapper(self, parking: Parking, params: DetectionParams):
 
     print(str(parking.image_date))
 
-    spaces = OccupancyDetectorDiff.detect_image(params,
-                                                parking.image, parking.image_date, parking.spaces)
+    spaces = self.occupancy_detector.detect_image(params,
+                                                  parking.image, parking.image_date, parking.spaces)
 
     real, predicted = PerformanceMetricsProviderSklearn.get_real_predicted(
         spaces)

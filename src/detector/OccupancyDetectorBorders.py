@@ -224,7 +224,7 @@ class OccupancyDetectorBorders(OccupancyDetector):
         space.count = count
 
         # Decide if vacant using threshold
-        return(count < vacant_threshold * a)
+        return(count/a < vacant_threshold)
 
     @staticmethod
     def preProcess(params: DetectionParams, img: cv.Mat) -> cv.Mat:
@@ -262,10 +262,10 @@ class OccupancyDetectorBorders(OccupancyDetector):
         # cv.imshow("IMGTresh", imgThreshold)
 
         # Remove salt and pepper noise
-        if(params.median_k != -1):
-            imgMedian = cv.medianBlur(imgThreshold, params.median_k)
-        else:
-            imgMedian = imgThreshold
+        # if(params.median_k != -1):
+        #     imgMedian = cv.medianBlur(imgThreshold, params.median_k)
+        # else:
+        imgMedian = imgThreshold
 
         # Make thicker edges
         # kernel = np.ones((5,5), np.uint8)
@@ -282,6 +282,8 @@ class OccupancyDetectorBorders(OccupancyDetector):
 
         # Show images
         if(params.show_imshow):
+            cv.imshow("IMGOriginal", img)
+            cv.imshow("0 - IMGGray", imgGray)
             cv.imshow("1 - IMGBlur", imgBlur)
             cv.imshow("2 - IMGTresh", imgThreshold)
             cv.imshow("3 - IMGMedian", imgMedian)

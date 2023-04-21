@@ -21,8 +21,14 @@ class ParkingOccupancyProcessor(ABC):
         # Overriden by child implementation
         self.parking_provider = None
 
-        self.occupancy_detector: OccupancyDetector = OccupancyDetectorDiff(
-            detection_params)
+        if(detection_params.at_method is not None):
+            self.occupancy_detector: OccupancyDetector = OccupancyDetectorBorders(
+                detection_params)
+            print('Using OccupancyDetectorBorders')
+        else:
+            self.occupancy_detector: OccupancyDetector = OccupancyDetectorDiff(
+                detection_params)
+            print('Using OccupancyDetectorDiff')
 
         self.performance_metrics: PerformanceMetricsProvider = performance_metrics_provider
 
