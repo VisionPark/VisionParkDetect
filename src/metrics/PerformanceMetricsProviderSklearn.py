@@ -9,7 +9,7 @@ from src.metrics.entity.PerformanceMetrics import PerformanceMetrics
 from sklearn.metrics import roc_auc_score, auc, average_precision_score
 from adjustText import adjust_text
 from matplotlib.font_manager import FontProperties
-from numpy import arange, mean
+import numpy as np
 
 # https://www.iartificial.net/precision-recall-f1-accuracy-en-clasificacion/
 # Precision nos da la calidad de la predicción: ¿qué porcentaje de los que hemos dicho que son la clase positiva, en realidad lo son?
@@ -59,7 +59,7 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
         print('F1 Score: %.3f' % self.metrics.f1)
         print('Accuracy: %.3f' % self.metrics.accuracy)
 
-        if(plot):
+        if (plot):
             cm_display = metrics.ConfusionMatrixDisplay(
                 confusion_matrix=metrics.confusion_matrix(
                     self.real, self.predicted),
@@ -91,16 +91,23 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
         print(df.round(3))
 
     @staticmethod
-    def show_tpr_fpr(metrics_dict_vt: dict, parking_id, weather, show_diff=False, save_fig_dst=None):
+    def show_tpr_fpr(metrics_dict_vt: dict, metrics_extra: dict = None, show_diff=False, save_fig_dst=None, first_param_str="blockSize"):
 
-        fontP = FontProperties()
-        fontP.set_size('xx-small')
+        fontP = FontProperties(family='sans-serif', size=8)
+        # fontP.set_size('xx-small')
 
         fig, ax = plt.subplots(2, 1, figsize=(5, 10), dpi=300, sharey=True)
 
         # plt.figure()
         index = 0
+        all_tpr_list = list()
+        all_fpr_list = list()
+        all_precision_list = list()
+
         for vt, metrics_dict_diff in metrics_dict_vt.items():
+           # if vt != 0.3:
+           #     continue
+
             tpr_list = list()
             fpr_list = list()
             precision_list = list()
@@ -118,77 +125,90 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
             auc = round(roc_auc_score(real_list, predicted_list), 3)
             ap = round(average_precision_score(real_list, predicted_list), 3)
 
+            all_tpr_list = all_tpr_list + tpr_list
+            all_fpr_list = all_fpr_list + fpr_list
+            all_precision_list = all_precision_list + precision_list
+
             # ROC CURVE
             li = zip(*[fpr_list, tpr_list])
             ax[0].plot(*zip(*li), linestyle='--', marker='o',
-                       label=f'{index}: bs={vt} AUC={auc}')
+                       label=f'{index}: {first_param_str}={vt} AUC={auc:.3f}')
 
             # PR CURVE
             li_recall = zip(*[tpr_list, precision_list])
             ax[1].plot(*zip(*li_recall), linestyle='--', marker='o',
-                       label=f'{index}: bs={vt} AP={ap}')
+                       label=f'{index}: {first_param_str}={vt} AP={ap:.3f}')
 
             index += 1
+
+        # Optional: plot extra metrics
+        if metrics_extra is not None:
+            for label, metrics in metrics_extra.items():
+                tpr = metrics.recall
+                fpr = 1 - metrics.specificity
+                precision = metrics.precision
+
+                # ROC CURVE
+                # li = zip(*[fpr, tpr])
+                ax[0].plot((fpr, tpr), marker='o',
+                           label=f'{index}: {label}')
+
+                # PR CURVE
+                # li_recall = zip(*[tpr, precision])
+                ax[1].plot((tpr, precision), linestyle='--', marker='o',
+                           label=f'{index}: {label}')
+
+                index += 1
+
         # Set fixed x and y axis limits and ticks
         for axi in ax:
             axi.set_xlim([-0.025, 1.025])
             axi.set_ylim([-0.025, 1.025])
-            axi.set_xticks(arange(0, 1.1, 0.05))
-            axi.set_yticks(arange(0, 1.1, 0.05))
+            axi.set_xticks(np.arange(0, 1.1, 0.1))
+            axi.set_yticks(np.arange(0, 1.05, 0.05))
+            axi.xaxis.set_major_locator(plt.MultipleLocator(0.1))
+            axi.yaxis.set_major_locator(plt.MultipleLocator(0.05))
+            axi.grid(color='gray', linestyle='--', linewidth=0.5)
+            axi.legend(loc='lower right', prop=fontP)
+            axi.tick_params(axis='both', labelsize=6)
 
         # Graph 1: FPR-TPR
         plt.subplot(2, 1, 1)
-        fig.suptitle(f'{parking_id}-{weather}')
+        # fig.suptitle(f'{parking_id}-{weather}')
+        ax[0].set_title('ROC Curve')
         ax[0].set_xlabel('False positive rate (1 - Specificity)', fontsize=8)
         ax[0].set_ylabel('True positive rate (Recall)', fontsize=8)
-        # plt.xticks(arange(0, 1.05, 0.05), fontsize=6)
-        # plt.yticks(arange(min(0.5, min(tpr_list)), 1.05, 0.05), fontsize=6)
-        ax[0].locator_params(axis='both', tight=True, nbins=15)
-        ax[0].tick_params(axis='both', labelsize=6)
 
-        ax[0].plot(0, 1, marker='x',
-                   label='Perfect classifier')
-        plt.legend(loc='lower right', prop=fontP)
+        plt.plot(0, 1, marker='x',
+                 label='Perfect classifier')
 
         if show_diff:
             texts = [plt.text(fpr_list[i], tpr_list[i], diff_list[i], size=8)
                      for i in range(len(fpr_list))]
             adjust_text(texts, arrowprops={
-                        'arrowstyle': 'fancy'}, expand_points=(1.3, 1.3))
+                        'arrowstyle': '->'}, expand_points=(1.1, 2), x=all_fpr_list, y=all_tpr_list)
 
         # Graph 2: Recall-TPR
         plt.subplot(2, 1, 2)
+        ax[1].set_title('PR Curve')
         ax[1].set_xlabel('True positive rate (Recall)', fontsize=8)
         ax[1].set_ylabel('Precision', fontsize=8)
-        ax[1].locator_params(axis='both', tight=True, nbins=15)
-        ax[1].tick_params(axis='both', labelsize=6)
-        # plt.xticks(arange(min(0.5, min(tpr_list)), 1.05, 0.05), fontsize=6)
-        # plt.yticks(arange(min(0.5, min(precision_list)), 1.05, 0.05), fontsize=6)
-
-        # if len(ax[1].get_xticks()) < 5:
-        #     step = (1-min(tpr_list))/10
-        #     ax[1].set_xticks(
-        #         arange(min(tpr_list), 1+step, step))
-
-        ax[1].xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
-        # We change the fontsize of minor ticks label
 
         plt.plot(1, 1, marker='x',
                  label='Perfect classifier')
-        ax[1].legend(loc='lower right', prop=fontP)
 
         if show_diff:
             texts = [plt.text(tpr_list[i], precision_list[i], diff_list[i], size=8)
                      for i in range(len(fpr_list))]
             adjust_text(texts, arrowprops={
-                        'arrowstyle': 'fancy'}, expand_points=(1.3, 1.3))
+                        'arrowstyle': '->'}, expand_points=(1.1, 2), x=all_tpr_list, y=all_precision_list)
 
         plt.subplots_adjust(left=0.1,
                             bottom=0.1,
                             right=1,
                             top=0.9,
                             wspace=0.1,
-                            hspace=0.4)
+                            hspace=0.2)
 
         if save_fig_dst is not None:
             plt.savefig(save_fig_dst, facecolor='white', bbox_inches='tight')
@@ -196,7 +216,7 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
         plt.show()
 
     @staticmethod
-    def choose_parameters(metrics_dict: dict):
+    def choose_parameters(metrics_dict: dict, first_param_str="blockSize"):
         """
         Calculates the AUC and AP for all curves in the given nested dictionary, along with the average for each weather condition and for all conditions combined.
 
@@ -212,18 +232,18 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
         bs_auc_dict = dict()
         bs_ap_dict = dict()
 
-        max_auc_global = 0
-        max_auc_global_bs = 0
-        max_auc_weather = ""
         max_f1_global = 0
         max_f1_global_vt = 0
+        max_f1_global_bs = 0
 
         for weather_condition, weather_dict in metrics_dict.items():
 
-            max_auc = 0
-            max_auc_bs = 0
+            max_ap = 0
+            max_ap_bs = 0
             max_f1 = 0
             max_f1_vt = 0
+            max_f1_bs = 0
+            max_metrics = None
 
             for bs, vacant_dict in weather_dict.items():
                 real_list = list()
@@ -233,39 +253,40 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
                     real_list = real_list + metrics.real
                     predicted_list = predicted_list + metrics.predicted
 
-                    bs_auc_dict[bs] = (roc_auc_score(
-                        real_list, predicted_list))
-                    bs_ap_dict[bs] = average_precision_score(
-                        real_list, predicted_list)
+                bs_auc_dict[bs] = (roc_auc_score(
+                    real_list, predicted_list))
+                bs_ap_dict[bs] = average_precision_score(
+                    real_list, predicted_list)
 
-                    if bs_auc_dict[bs] > max_auc:
-                        max_auc = bs_auc_dict[bs]
-                        max_auc_bs = bs
+                if bs_ap_dict[bs] > max_ap:
+                    max_ap = bs_ap_dict[bs]
+                    max_ap_bs = bs
 
-                if max_auc > max_auc_global:
-                    max_auc_global = max_auc
-                    max_auc_global_bs = max_auc_bs
-                    max_auc_weather = weather_condition
-
-            for vt, metrics in weather_dict[max_auc_bs].items():
+            for vt, metrics in weather_dict[max_ap_bs].items():
                 if metrics.f1 > max_f1:
                     max_f1 = metrics.f1
                     max_f1_vt = vt
+                    max_f1_bs = max_ap_bs
+                    max_metrics = metrics
+
+            print(max_metrics.to_latex("Training",
+                                       weather_condition, max_ap_bs, max_f1_vt))
+
+            if max_f1 > max_f1_global:
+                max_f1_global = max_f1
+                max_f1_global_vt = max_f1_vt
+                max_f1_global_bs = max_f1_bs
+                max_f1_weather = weather_condition
 
             print(f"\nBest parameters for weather: {weather_condition}")
             print(
-                f"block_size: {max_auc_bs}\t\t\tSelected from max AUC={max_auc}")
+                f"{first_param_str}: {max_ap_bs}\t\t\tSelected from max AP={max_ap}")
             print(
                 f"vacant_threshold: {max_f1_vt}\t\tSelected from max f1={max_f1}")
 
-        for vt, metrics in metrics_dict[max_auc_weather][max_auc_global_bs].items():
-            if metrics.f1 > max_f1_global:
-                max_f1_global = metrics.f1
-                max_f1_global_vt = vt
-
         print("\nBest GLOBAL parameters")
         print(
-            f"block_size: {max_auc_global_bs}\t\t\tSelected from max AUC={max_auc_global} and weather {max_auc_weather}")
+            f"{first_param_str}: {max_f1_global_bs}\t\t\tSelected from max f1={max_f1_global} and weather {max_f1_weather}")
         print(
             f"vacant_threshold: {max_f1_global_vt}\t\tSelected from max f1={max_f1_global}")
 
@@ -418,3 +439,81 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
         #         f"vacant_threshold: {best_params[weather_condition]['vacant_threshold']}\t\tHighest sum of PR for the chosen block_size ({round(best_params[weather_condition]['AUC'],3)}):{round(best_params[weather_condition]['precision']+best_params[weather_condition]['recall'],3)}")
 
         # return metrics_df
+
+
+def scatter_metrics(metrics_list):
+
+    fontP = FontProperties(family='sans-serif', size=8)
+    # fontP.set_size('xx-small')
+
+    fig, ax = plt.subplots(2, 1, figsize=(5, 10), dpi=300, sharey=True)
+
+    for metrics in metrics_list:
+        tpr = metrics.recall
+        fpr = 1 - metrics.specificity
+        precision = metrics.precision
+
+        ax[0].scatter(tpr, fpr, marker='o')
+        ax[1].scatter(precision, tpr, marker='o')
+
+    # # Optional: plot extra metrics
+    # if metrics_extra is not None:
+    #     for label, metrics in metrics_extra.items():
+    #         tpr = metrics.recall
+    #         fpr = 1 - metrics.specificity
+    #         precision = metrics.precision
+
+    #         # ROC CURVE
+    #         # li = zip(*[fpr, tpr])
+    #         ax[0].plot((fpr, tpr), marker='o',
+    #                    label=f'{index}: {label}')
+
+    #         # PR CURVE
+    #         # li_recall = zip(*[tpr, precision])
+    #         ax[1].plot((tpr, precision), linestyle='--', marker='o',
+    #                    label=f'{index}: {label}')
+
+    #         index += 1
+
+    # Set fixed x and y axis limits and ticks
+    for axi in ax:
+        axi.set_xlim([-0.025, 1.025])
+        axi.set_ylim([-0.025, 1.025])
+        axi.set_xticks(np.arange(0, 1.1, 0.1))
+        axi.set_yticks(np.arange(0, 1.05, 0.05))
+        axi.xaxis.set_major_locator(plt.MultipleLocator(0.1))
+        axi.yaxis.set_major_locator(plt.MultipleLocator(0.05))
+        axi.grid(color='gray', linestyle='--', linewidth=0.5)
+        axi.legend(loc='lower right', prop=fontP)
+        axi.tick_params(axis='both', labelsize=6)
+
+    # Graph 1: FPR-TPR
+    plt.subplot(2, 1, 1)
+    # fig.suptitle(f'{parking_id}-{weather}')
+    ax[0].set_title('ROC Curve')
+    ax[0].set_xlabel('False positive rate (1 - Specificity)', fontsize=8)
+    ax[0].set_ylabel('True positive rate (Recall)', fontsize=8)
+
+    plt.plot(0, 1, marker='x',
+             label='Perfect classifier')
+
+    # Graph 2: Recall-TPR
+    plt.subplot(2, 1, 2)
+    ax[1].set_title('PR Curve')
+    ax[1].set_xlabel('True positive rate (Recall)', fontsize=8)
+    ax[1].set_ylabel('Precision', fontsize=8)
+
+    plt.plot(1, 1, marker='x',
+             label='Perfect classifier')
+
+    plt.subplots_adjust(left=0.1,
+                        bottom=0.1,
+                        right=1,
+                        top=0.9,
+                        wspace=0.1,
+                        hspace=0.2)
+
+    # if save_fig_dst is not None:
+    #     plt.savefig(save_fig_dst, facecolor='white', bbox_inches='tight')
+
+    plt.show()

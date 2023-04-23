@@ -187,22 +187,21 @@ class OccupancyDetectorDiff(OccupancyDetector):
                 if median_kernel_size % 2 == 0:
                     median_kernel_size = median_kernel_size+1
 
-                if median_kernel_size >= 3:
-                    imgMedian = cv.medianBlur(imgThreshold, median_kernel_size)
-                else:
-                    imgMedian = imgThreshold
+                # if median_kernel_size >= 3:
+                #     imgMedian = cv.medianBlur(imgThreshold, median_kernel_size)
+                # else:
+                #     imgMedian = imgThreshold
 
                 # imgEro = cv.erode(imgMedian, kernel, iterations=1)
                 # imgDilate = cv.dilate(imgEro, kernel, iterations=1)
 
                 bwThresh = cv.getTrackbarPos("4-BW Threshold", "Trackbars")
                 imgBw = OccupancyDetectorDiff.bwareaopen(
-                    imgMedian, bwThresh)
+                    imgThreshold, bwThresh)
 
                 cv.imshow("1 - IMG Blur", imgBlur)
                 cv.imshow("2 - IMGTresh", imgThreshold)
-                cv.imshow("3 - IMGMedian", imgMedian)
-                cv.imshow("4 - IMG BW", imgBw)
+                cv.imshow("3 - IMG BW", imgBw)
                 # cv.imshow("IMG Dilate", imgDilate)
 
                 params = DetectionParams((gauss_kernel_size, gauss_kernel_size), gb_s=0,
