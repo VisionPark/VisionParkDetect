@@ -26,7 +26,7 @@ class OccupancyDetectorBorders(OccupancyDetector):
         new_spaces = []
         for space in spaces.copy():
             vertex = space.vertex
-            if(vertex.size == 0):
+            if (vertex.size == 0):
                 continue
             vertex = vertex.reshape(4, 1, 2)
 
@@ -34,8 +34,9 @@ class OccupancyDetectorBorders(OccupancyDetector):
             roi = OccupancyDetector.get_roi(imgPre, vertex)
 
             # Decide if vacant depending on the detection area
+            OccupancyDetectorBorders.set_space_count_area(roi, space)
             is_vacant = OccupancyDetectorBorders.is_space_vacant(
-                roi, space, params.vacant_threshold)
+                space, params.vacant_threshold)
 
             # Update space occupancy
             space.is_vacant = is_vacant
@@ -49,20 +50,20 @@ class OccupancyDetectorBorders(OccupancyDetector):
         # Convert the image to grayscale
         imgGray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
-        if(params.gb_k is None):
+        if (params.gb_k is None):
             imgBlur = imgGray
         else:
             imgBlur = cv.GaussianBlur(
                 imgGray, params.gb_k, params.gb_s)
 
-        if(params.bf_d is None):
+        if (params.bf_d is None):
             imgBlur = imgGray
         else:
             imgBlur = cv.bilateralFilter(
                 imgBlur, params.bf_d, params.bf_sigma_color, params.bf_sigma_space)
 
         # Apply Canny edge detection
-        if(params.dynamic_t is None):
+        if (params.dynamic_t is None):
             t1 = params.t1
             t2 = params.t2
         else:
@@ -77,14 +78,14 @@ class OccupancyDetectorBorders(OccupancyDetector):
         imgEdges = cv.Canny(imgBlur, params.t1, params.t2)
 
         # Remove small objects
-        if(params.bw_size != -1):
+        if (params.bw_size != -1):
             imgBw = OccupancyDetectorBorders.bwareaopen(
                 imgEdges, params.bw_size)
         else:
             imgBw = imgEdges
         # cv.imshow("IMG Dilate", imgDilate)
 
-        if(show_imshow):
+        if (show_imshow):
             cv.imshow('1 - Img gray', imgGray)
             cv.imshow('2 - Biltareal filter', imgBlur)
             cv.imshow('3 - Canny Edge Detection', imgEdges)
@@ -205,7 +206,7 @@ class OccupancyDetectorBorders(OccupancyDetector):
             # cv.destroyAllWindows()
 
     @staticmethod
-    def is_space_vacant(roi: cv.Mat, space: Space, vacant_threshold) -> bool:
+    def set_space_count_area(roi: cv.Mat, space: Space):
         """ Determine if space is vacant depending on the pixel count.
     If count is less than vacant_threshold * area portion, space is vacant.
     """
@@ -223,8 +224,16 @@ class OccupancyDetectorBorders(OccupancyDetector):
         space.area = a
         space.count = count
 
+    @staticmethod
+    def is_space_vacant(space: Space, vacant_threshold) -> bool:
+        """ Determine if space is vacant depending on the pixel count.
+    If count is less than vacant_threshold * area portion, space is vacant.
+    """
+        a = space.area
+        count = space.count
+
         # Decide if vacant using threshold
-        return(count/a < vacant_threshold)
+        return (count/a < vacant_threshold)
 
     @staticmethod
     def preProcess(params: DetectionParams, img: cv.Mat) -> cv.Mat:
@@ -241,12 +250,12 @@ class OccupancyDetectorBorders(OccupancyDetector):
         # cv.imshow("imgGray", imgGray)
         # cv.waitKey(0)
 
-        if(params.channel == "l"):
+        if (params.channel == "l"):
             imgGray = l
-        elif(params.channel == "v"):
+        elif (params.channel == "v"):
             imgGray = v
 
-        if(params.gb_k is None):
+        if (params.gb_k is None):
             imgBlur = imgGray
         else:
             imgBlur = cv.GaussianBlur(
@@ -273,7 +282,7 @@ class OccupancyDetectorBorders(OccupancyDetector):
         # imgDilate = cv.dilate(imgEro, kernel, iterations=1)
 
         # Remove small objects
-        if(params.bw_size != -1):
+        if (params.bw_size != -1):
             imgBw = OccupancyDetectorBorders.bwareaopen(
                 imgMedian, params.bw_size)
         else:
@@ -281,7 +290,7 @@ class OccupancyDetectorBorders(OccupancyDetector):
         # cv.imshow("IMG Dilate", imgDilate)
 
         # Show images
-        if(params.show_imshow):
+        if (params.show_imshow):
             cv.imshow("IMGOriginal", img)
             cv.imshow("0 - IMGGray", imgGray)
             cv.imshow("1 - IMGBlur", imgBlur)

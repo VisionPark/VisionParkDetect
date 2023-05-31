@@ -33,7 +33,7 @@ class OccupancyDetectorDiff(OccupancyDetector):
         new_spaces = []
         for space in spaces.copy():
             vertex = space.vertex
-            if(vertex.size == 0):
+            if (vertex.size == 0):
                 continue
             vertex = vertex.reshape(4, 1, 2)
 
@@ -72,10 +72,10 @@ class OccupancyDetectorDiff(OccupancyDetector):
             diff, params.diff_threshold, 255, cv.THRESH_BINARY)[1]
 
         # Remove salt and pepper noise
-        if params.median_k != -1:
-            imgMedian = cv.medianBlur(imgThreshold, params.median_k)
-        else:
-            imgMedian = imgThreshold
+        # if params.median_k != -1:
+        #     imgMedian = cv.medianBlur(imgThreshold, params.median_k)
+        # else:
+        #     imgMedian = imgThreshold
 
         # Make thicker edges
         # kernel = np.ones((5,5), np.uint8)
@@ -85,17 +85,16 @@ class OccupancyDetectorDiff(OccupancyDetector):
         # Remove small objects
         if params.bw_size != -1:
             imgBw = OccupancyDetectorDiff.bwareaopen(
-                imgMedian, params.bw_size)
+                imgThreshold, params.bw_size)
         else:
-            imgBw = imgMedian
+            imgBw = imgThreshold
         # cv.imshow("IMG Dilate", imgDilate)
 
         if params.show_imshow:
             cv.imshow("1 - IMGBlur", img_blur)
             cv.imshow("2 - IMGEmptyBlur", img_empty_blur)
             cv.imshow("3 - diff_threshold", imgThreshold)
-            cv.imshow("4 - IMGMedian", imgMedian)
-            cv.imshow("5 - imgBw", imgBw)
+            cv.imshow("4 - imgBw", imgBw)
 
         return imgBw
 
@@ -122,6 +121,10 @@ class OccupancyDetectorDiff(OccupancyDetector):
             cv.imshow("1 - img_empty_gray", img_empty_gray)
             cv.imshow('2 - Img matched', img_matched_gray)
             cv.imshow("3 - diff_threshold", imgThreshold)
+
+            cv.imwrite('img_empty.png', img_empty)
+            cv.imwrite('img_matched.png', img_matched)
+            cv.imwrite('img_diff_threshold.png', imgThreshold)
 
         return imgThreshold
 
@@ -244,7 +247,7 @@ class OccupancyDetectorDiff(OccupancyDetector):
         space.count = count
 
         # Decide if vacant using threshold
-        return(count < vacant_threshold * a)
+        return (count < vacant_threshold * a)
 
     def bwareaopen(img_input: cv.Mat, min_size: int, connectivity=8):
         """

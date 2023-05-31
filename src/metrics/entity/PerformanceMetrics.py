@@ -11,3 +11,9 @@ class PerformanceMetrics:
 
     def to_latex(self, type=None, weather=None, bs=None, vt=None):
         return f"{type} & {weather} & {bs} & {vt} & {self.precision:.3f} & {self.specificity:.3f} & {self.recall:.3f} & {self.f1:.3f} & {self.accuracy:.3f}"
+
+    def __str__(self):
+        return str(f"[{len(self.predicted)} samples] F1:{self.f1:.2f} Accuracy:{self.accuracy:.2f})")
+
+    def __repr__(self):
+        return repr(str(self))

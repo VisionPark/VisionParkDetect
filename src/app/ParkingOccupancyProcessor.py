@@ -7,7 +7,7 @@ from src.detector.OcupancyDetector import OccupancyDetector
 from src.metrics.PerformanceMetricsProvider import PerformanceMetricsProvider
 from src.metrics.PerformanceMetricsProviderSklearn import PerformanceMetricsProviderSklearn
 from src.metrics.entity.PerformanceMetrics import PerformanceMetrics
-from src.data.ParkingProvider import ParkingProvider
+from src.data.ParkingProvider import NoImageException, NoSpacesException, ParkingProvider
 from src.data.ParkingProvider import ParkingProviderParams
 import cv2 as cv
 import cvzone
@@ -21,7 +21,7 @@ class ParkingOccupancyProcessor(ABC):
         # Overriden by child implementation
         self.parking_provider = None
 
-        if(detection_params.at_method is not None):
+        if (detection_params.at_method is not None):
             self.occupancy_detector: OccupancyDetector = OccupancyDetectorBorders(
                 detection_params)
             print('Using OccupancyDetectorBorders')
@@ -50,7 +50,7 @@ class ParkingOccupancyProcessor(ABC):
                              (98, 169, 36), thickness=2)
 
             # Print detection value
-            if(space.count is not None):
+            if (space.count is not None):
                 v = space.vertex.reshape(-1, 1, 2)
                 cols = v[:, :, 0].flatten()
                 rows = v[:, :, 1].flatten()
@@ -82,9 +82,10 @@ class ParkingOccupancyProcessor(ABC):
                 parking.image, parking.spaces, real, predicted)
 
             cv.imshow("Parking Detection", img)
+            # cv.imwrite("img_detection.png", img)
             key = cv.waitKey(0)
 
-            if(key == 27):
+            if (key == 27):
                 self.occupancy_detector.params.show_imshow = False
             cv.destroyAllWindows()
 
