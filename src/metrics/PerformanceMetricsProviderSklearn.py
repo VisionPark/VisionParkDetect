@@ -10,6 +10,7 @@ from sklearn.metrics import roc_auc_score, auc, average_precision_score
 from adjustText import adjust_text
 from matplotlib.font_manager import FontProperties
 import numpy as np
+from numpy import trapz
 import concurrent.futures
 from scipy.spatial import distance
 # https://www.iartificial.net/precision-recall-f1-accuracy-en-clasificacion/
@@ -100,60 +101,29 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
         fig, ax = plt.subplots(2, 1, figsize=(5, 10), dpi=300, sharey=True)
 
         index = 0
-        all_tpr_list = list()
-        all_fpr_list = list()
-        all_precision_list = list()
-
-        def process_diff(diff, metrics):
-            tpr_list = metrics.recall
-            fpr_list = 1 - metrics.specificity
-            precision_list = metrics.precision
-            real_list = metrics.real
-            predicted_list = metrics.predicted
-            auc = round(roc_auc_score(real_list, predicted_list), 3)
-            ap = round(average_precision_score(real_list, predicted_list), 3)
-            return tpr_list, fpr_list, precision_list, auc, ap, real_list, predicted_list
 
         def process_metrics_dict_diff(vt, metrics_dict_diff):
             tpr_list = list()
             fpr_list = list()
             precision_list = list()
-            diff_list = list()
-            real_list = list()
-            predicted_list = list()
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
-                futures = []
-                for diff, metrics in metrics_dict_diff.items():
-                    futures.append(executor.submit(
-                        process_diff, diff, metrics))
+            for diff, metrics in metrics_dict_diff.items():
+                tpr_list.append(metrics.recall)
+                fpr_list.append(1 - metrics.specificity)
+                precision_list.append(metrics.precision)
 
-                for future in concurrent.futures.as_completed(futures):
-                    result = future.result()
-                    tpr_list.append(result[0])
-                    fpr_list.append(result[1])
-                    precision_list.append(result[2])
-                    # diff_list.append(diff)
-                    real_list.extend(result[5])
-                    predicted_list.extend(result[6])
+            auc = trapz(x=fpr_list, y=tpr_list)
+            ap = trapz(x=tpr_list, y=precision_list)
 
-                    all_tpr_list.append(result[0])
-                    all_fpr_list.append(result[1])
-                    all_precision_list.append(result[2])
+            # ROC CURVE
+            li = zip(*[fpr_list, tpr_list])
+            ax[0].plot(*zip(*li), linestyle='--', marker='.',
+                       label=f'{index}: {first_param_str}={vt} AUC={auc:.3f}')
 
-                auc = round(roc_auc_score(real_list, predicted_list), 3)
-                ap = round(average_precision_score(
-                    real_list, predicted_list), 3)
-
-                # ROC CURVE
-                li = zip(*[fpr_list, tpr_list])
-                ax[0].plot(*zip(*li), linestyle='--', marker='.',
-                           label=f'{index}: {first_param_str}={vt} AUC={auc:.3f}')
-
-                # PR CURVE
-                li_recall = zip(*[tpr_list, precision_list])
-                ax[1].plot(*zip(*li_recall), linestyle='--', marker='.',
-                           label=f'{index}: {first_param_str}={vt} AP={ap:.3f}')
+            # PR CURVE
+            li_recall = zip(*[tpr_list, precision_list])
+            ax[1].plot(*zip(*li_recall), linestyle='--', marker='.',
+                       label=f'{index}: {first_param_str}={vt} AP={ap:.3f}')
 
             # return diff_list
 
@@ -266,17 +236,17 @@ class PerformanceMetricsProviderSklearn(PerformanceMetricsProvider):
             max_auc_weather[weather_condition] = [-1, -1]
 
             for bs, vacant_dict in weather_dict.items():
-                real_list = list()
-                predicted_list = list()
+                tpr_list = list()
+                fpr_list = list()
+                precision_list = list()
                 for vt, metrics in vacant_dict.items():
 
-                    real_list = real_list + metrics.real
-                    predicted_list = predicted_list + metrics.predicted
+                    tpr_list.append(metrics.recall)
+                    fpr_list.append(1 - metrics.specificity)
+                    precision_list.append(metrics.precision)
 
-                auc = roc_auc_score(
-                    real_list, predicted_list)
-                ap = average_precision_score(
-                    real_list, predicted_list)
+                auc = trapz(x=fpr_list, y=tpr_list)
+                ap = trapz(x=tpr_list, y=precision_list)
 
                 if auc > max_auc_weather[weather_condition][0]:
                     max_auc_weather[weather_condition][0] = auc
