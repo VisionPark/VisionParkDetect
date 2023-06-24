@@ -11,7 +11,7 @@ from sys import path
 import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 import numpy as np
 from src.metrics.PerformanceMetricsProvider import PerformanceMetricsProvider
 from src.metrics.PerformanceMetricsProviderSklearn import PerformanceMetricsProviderSklearn

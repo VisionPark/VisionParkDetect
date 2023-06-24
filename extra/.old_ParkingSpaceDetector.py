@@ -1,5 +1,5 @@
 import multiprocessing
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 from concurrent.futures import ThreadPoolExecutor
 from IPython.display import clear_output
 import matplotlib.pyplot as plt
@@ -113,7 +113,7 @@ def imhist(src):
 
 
 def imshow(img, title=''):
-    while(1):
+    while (1):
         cv.imshow(title, img)
         if cv.waitKey(20) & 0xFF == 27:
             break
@@ -164,7 +164,7 @@ def is_space_vacant(vertex, count, vacant_threshold) -> bool:
 """
     a = area(vertex)
 
-    return(count < vacant_threshold * a)
+    return (count < vacant_threshold * a)
 
 
 class DetectionParams:
@@ -270,12 +270,12 @@ def preProcess(img: cv.Mat, params: DetectionParams) -> cv.Mat:
     # cv.imshow("imgGray", imgGray)
     # cv.waitKey(0)
 
-    if(params.channel == "l"):
+    if (params.channel == "l"):
         imgGray = l
-    elif(params.channel == "v"):
+    elif (params.channel == "v"):
         imgGray = v
 
-    if(params.gb_k is None):
+    if (params.gb_k is None):
         imgBlur = imgGray
     else:
         imgBlur = cv.GaussianBlur(imgGray, params.gb_k, params.gb_s)
@@ -286,9 +286,9 @@ def preProcess(img: cv.Mat, params: DetectionParams) -> cv.Mat:
     # cv.imshow("IMGTresh", imgThreshold)
 
     # Remove salt and pepper noise
-    if(params.median_k != -1):
+    if (params.median_k != -1):
         imgMedian = cv.medianBlur(imgThreshold, params.median_k)
-        if(params.show_imshow):
+        if (params.show_imshow):
             cv.imshow("1 - IMGBlur", imgBlur)
             cv.imshow("2 - IMGTresh", imgThreshold)
             cv.imshow("3 - IMGMedian", imgMedian)
@@ -301,9 +301,9 @@ def preProcess(img: cv.Mat, params: DetectionParams) -> cv.Mat:
     # imgDilate = cv.dilate(imgEro, kernel, iterations=1)
 
     # Remove small objects
-    if(params.bw_size != -1):
+    if (params.bw_size != -1):
         imgBw = bwareaopen(imgMedian, params.bw_size)
-        if(params.show_imshow):
+        if (params.show_imshow):
             cv.imshow("4 - imgBw", imgBw)
     else:
         imgBw = imgMedian
@@ -407,7 +407,7 @@ def detect_batch(files, params: DetectionParams, showConfusionMatrix=True):
 
         for space in spaces:
             vertex = get_points_xml(space)
-            if(vertex.size == 0):
+            if (vertex.size == 0):
                 continue
             vertex = vertex.reshape(-1, 1, 2)
 
@@ -429,12 +429,12 @@ def detect_batch(files, params: DetectionParams, showConfusionMatrix=True):
             predicted.append(vacant)
             real.append(vacant_real)
 
-            if(params.show_imshow):
+            if (params.show_imshow):
                 space_area = area(points)
-                assert(space_area > 0)
+                assert (space_area > 0)
                 drawSpaceSeg(img, np.array(points, np.int32), count, not vacant, min(
                     cols), max(rows), space_area, not vacant_real)
-                if(vacant != vacant_real):  # Show error in prediction
+                if (vacant != vacant_real):  # Show error in prediction
                     print("ERROR PREDICTED vacant: "+str(bool(vacant)))
                     print("Pixel count: "+str(count))
                     print(f"Area: {space_area} k={count/space_area}")
@@ -445,11 +445,11 @@ def detect_batch(files, params: DetectionParams, showConfusionMatrix=True):
                 cv.imshow("IMG with space seg", img)
 
                 key = cv.waitKey(0)
-                if(key == 27):
+                if (key == 27):
                     break
 
     confusion_matrix = metrics.confusion_matrix(real, predicted)
-    if(showConfusionMatrix):
+    if (showConfusionMatrix):
         # Precision Score = TP / (FP + TP). Minimize FP
         print('Precision: %.3f' % metrics.precision_score(real, predicted))
         # Recall Score = TP / (FN + TP). Minimize FN
@@ -464,7 +464,7 @@ def detect_batch(files, params: DetectionParams, showConfusionMatrix=True):
         cm_display.plot()
         plt.show()
 
-    if(params.show_imshow):
+    if (params.show_imshow):
         cv.destroyAllWindows()
 
     return confusion_matrix
@@ -487,7 +487,7 @@ def detect_image(filename, params: DetectionParams):
 
     for space in spaces:
         vertex = get_points_xml(space)
-        if(vertex.size == 0):
+        if (vertex.size == 0):
             continue
         vertex = vertex.reshape(-1, 1, 2)
 
@@ -506,7 +506,7 @@ def detect_image(filename, params: DetectionParams):
         predicted.append(vacant)
         real.append(vacant_real)
 
-    if(params.show_imshow):
+    if (params.show_imshow):
         cv.waitKey(0)
 
     confusion_matrix = metrics.confusion_matrix(real, predicted)

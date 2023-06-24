@@ -39,9 +39,10 @@ class ParkingProviderLocal(ParkingProvider):
         # Read and return next image
         if self.index < len(self.img_files):
             img = cv.imread(self.img_files[self.index])
+            # print('Reading image: ' + self.img_files[self.index])
             return img, datetime.now()
         else:
-            index = 0
+            self.index = 0
             raise NoImageException('Finished fetching path')
 
     def fetch_spaces(self) -> list[Space]:
@@ -52,30 +53,34 @@ class ParkingProviderLocal(ParkingProvider):
             # Open XML file
             with open(self.spaces_files[self.index], 'r') as f:
                 file = f.read()
+                # print('Reading file: ' + self.spaces_files[self.index])
             data = BeautifulSoup(file, "xml")
 
             # Read spaces node
             spaces_node = data.find_all('space')
             for space_xml in spaces_node:
-                # Extract vertex from xml
-                vertex = self.get_points_xml(space_xml)
+                # Check if space is valid
+                if space_xml.get('occupied') is not None:
 
-                # Get space id from xml
-                id = space_xml.get('id')
+                    # Extract vertex from xml
+                    vertex = self.get_points_xml(space_xml)
 
-                # Get real occupancy status
-                is_vacant_real = space_xml.get('occupied') == "0"
+                    # Get space id from xml
+                    id = space_xml.get('id')
 
-                # Build the space object
-                new_space = Space(id, vertex)
-                new_space.is_vacant_real = is_vacant_real
+                    # Get real occupancy status
+                    is_vacant_real = space_xml.get('occupied') == "0"
 
-                spaces_list.append(new_space)
+                    # Build the space object
+                    new_space = Space(id, vertex)
+                    new_space.is_vacant_real = is_vacant_real
+
+                    spaces_list.append(new_space)
 
             return spaces_list
 
         else:
-            index = 0
+            self.index = 0
             raise NoSpacesException('Finished fetching path')
 
     def update_spaces_occupancy(self, spaces: list[Space]):
